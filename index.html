@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUNDARI - Garment & Inventory Management</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Playfair Display & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sundari: {
+                            purple: '#3A1032',
+                            purpleDark: '#260A21',
+                            gold: '#D4AF37',
+                            goldDark: '#B38F24',
+                            goldLight: '#F3E5AB',
+                            cream: '#FDFBF7',
+                            cardBg: '#FFFFFF',
+                            textDark: '#2C2A29',
+                            rose: '#C85A6E'
+                        }
+                    },
+                    fontFamily: {
+                        brand: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f7f4eb;
+            font-family: 'Inter', sans-serif;
+            color: #2C2A29;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bg-textured {
+            background-color: #FDFBF7;
+            background-image: radial-gradient(#D4AF37 0.4px, transparent 0.4px);
+            background-size: 16px 16px;
+            background-opacity: 0.15;
+        }
+        .custom-shadow {
+            box-shadow: 0 4px 18px -2px rgba(58, 16, 50, 0.08);
+        }
+        .gold-border-glow {
+            border: 1px solid rgba(212, 175, 55, 0.4);
+        }
+        .gold-border-glow:focus-within {
+            border-color: #D4AF37;
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FDFBF7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4AF37;
+            border-radius: 999px;
+        }
+        /* Header styling using original logo canvas background texture */
+        .app-header {
+            background-color: #F8F5EE;
+            background-image: radial-gradient(#EFEAE1 1px, transparent 1px);
+            background-size: 16px 16px;
+            box-shadow: 0 2px 8px rgba(58, 16, 50, 0.08);
+        }
+
+        /* Header logo image tag */
+        .header-logo {
+            height: 72px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1));
+        }
+    </style>
+</head>
+<body class="bg-textured min-h-screen flex flex-col justify-between select-none">
+
+    <!-- APP HEADER -->
+    <header class="sticky top-0 z-40 app-header border-b border-sundari-gold/30 px-2 py-1 custom-shadow h-16 flex items-center">
+        <div class="max-w-7xl mx-auto flex items-center justify-between w-full h-full">
+            <!-- Brand Logo Image Only (Left Aligned & Maximized in Compact Header) -->
+            <div class="cursor-pointer flex items-center h-full" onclick="switchView('inventory')">
+                <img src="assets/Sundari.png"
+                     onerror="this.onerror=null; this.src='assets/Sundari_label_2.jpeg';" 
+                     alt="Sundari Logo" 
+                     class="h-24 w-auto max-w-none object-contain drop-shadow-sm transition-transform hover:scale-105" />
+            </div>
+
+            <!-- Header Right Menu -->
+            <div class="relative">
+                <button id="menu-btn" onclick="toggleMenu()" class="p-1.5 rounded-xl text-sundari-purple hover:bg-sundari-gold/10 transition-colors focus:outline-none" aria-label="Toggle Navigation Menu">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-sundari-gold/30 py-2 z-50 transform opacity-0 scale-95 transition-all duration-200">
+                    <a href="#" onclick="switchView('inventory'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-house w-6 text-sundari-gold"></i> Home
+                    </a>
+                    <a href="#" onclick="switchView('dashboard'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-chart-pie w-6 text-sundari-gold"></i> Dashboard
+                    </a>
+                    <a href="#" onclick="switchView('purchase-orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-boxes-stacked w-6 text-sundari-gold"></i> Inventory
+                    </a>
+                    <a href="#" onclick="switchView('orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-receipt w-6 text-sundari-gold"></i> Orders
+                    </a>
+                    <a href="#" onclick="switchView('preorders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-clipboard-list w-6 text-sundari-gold"></i> Preorders / Request
+                    </a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <a href="#" onclick="openModal('settings-modal'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-cloud-arrow-up w-6 text-sundari-gold"></i> Sync Google Sheets
+                    </a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <a href="#" onclick="resetApplication(); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50 transition">
+                        <i class="fa-solid fa-rotate-left w-6 text-red-500"></i> Reset App Data
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
+        
+        <!-- TOP STATS BAR & QUICK SEARCH -->
+        <div id="inventory-toolbar" class="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-sundari-gold/20 shadow-sm">
+            <!-- Search & Filters -->
+            <div class="flex flex-col sm:flex-row gap-2 flex-1">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="filterInventory()" placeholder="Search garments by name, SKU, size..." class="w-full pl-9 pr-4 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark placeholder-gray-400">
+                </div>
+                <div class="relative sm:w-48">
+                    <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
+                    <select id="inventory-stock-filter" onchange="filterInventory()" aria-label="Filter inventory by stock availability" class="w-full pl-8 pr-3 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                        <option value="available" selected>Available items</option>
+                        <option value="out-of-stock">Out of stock</option>
+                        <option value="all">All items</option>
+                    </select>
+                </div>
+                <div class="relative sm:w-36">
+                    <i class="fa-solid fa-ruler-horizontal absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
+                    <select id="inventory-size-filter" onchange="filterInventory()" aria-label="Filter inventory by size" class="w-full pl-8 pr-3 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                        <option value="all" selected>All</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Stats Badge Bar -->
+            <div class="flex items-center justify-between sm:justify-end gap-3 text-xs">
+                <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-3 py-1.5 rounded-xl font-medium text-sundari-purple">
+                    Total Items: <span id="stat-total-stock" class="font-bold text-sundari-goldDark">0</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium text-emerald-700">
+                    Active Stock: <span id="stat-total-qty" class="font-bold">0</span>
+                </div>
+                <button onclick="switchView('inventory')" id="view-inventory-btn" class="hidden sm:inline-flex items-center px-3 py-1.5 bg-sundari-purple text-white rounded-xl text-xs font-semibold hover:bg-sundari-purpleDark transition">
+                    <i class="fa-solid fa-grid-2 mr-1.5"></i> Inventory Grid
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: INVENTORY GRID (2-Column Mobile First Layout) -->
+        <section id="view-inventory" class="block">
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                <!-- Dynamic Garment Cards Injected via JS -->
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden py-16 text-center">
+                <i class="fa-solid fa-box-open text-5xl text-sundari-gold/40 mb-3"></i>
+                <p class="text-gray-500 font-medium">No items match this search and availability filter.</p>
+                <button onclick="openModal('add-inventory-modal')" class="mt-3 px-4 py-2 bg-sundari-gold text-sundari-purple font-semibold rounded-xl text-sm shadow hover:bg-sundari-goldDark hover:text-white transition">
+                    + Add New Garment
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 2: BUSINESS DASHBOARD -->
+        <section id="view-dashboard" class="hidden space-y-4">
+            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                    <div>
+                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Business Dashboard</h2>
+                        <p class="text-xs text-gray-500">Recorded sales, vendor purchases, and current inventory</p>
+                    </div>
+                    <span id="dashboard-updated" class="text-[11px] text-gray-400"></span>
+                </div>
+                <div id="dashboard-metrics" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3"></div>
+                <p class="mt-3 text-[10px] text-gray-400">Sales revenue uses logged orders. Profit/loss estimates gross profit from recorded item costs; it excludes other expenses and vendor charges not assigned to items. Purchase totals use vendor entries recorded in this app.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
+                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Stock by Category</h3>
+                    <div id="dashboard-stock-categories" class="space-y-3"></div>
+                </div>
+                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
+                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Recent Vendor Purchases</h3>
+                    <div id="dashboard-purchases" class="space-y-2"></div>
+                </div>
+                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow lg:col-span-2">
+                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Recent Sales</h3>
+                    <div id="dashboard-sales" class="overflow-x-auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: VENDOR PURCHASE ORDERS / INVENTORY -->
+        <section id="view-purchase-orders" class="hidden">
+            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
+                    <div>
+                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Inventory Purchase Orders</h2>
+                        <p class="text-xs text-gray-500">Vendor purchases logged with received stock</p>
+                    </div>
+                    <button onclick="openModal('add-inventory-modal')" class="px-4 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow hover:bg-sundari-purpleDark transition"><i class="fa-solid fa-plus mr-1"></i>Add New Inventory</button>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <label for="purchase-vendor-filter" class="text-xs font-semibold text-sundari-purple">Filter by vendor</label>
+                    <select id="purchase-vendor-filter" onchange="renderPurchaseOrders()" class="w-full sm:w-64 p-2.5 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                        <option value="all">All vendors</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse min-w-[680px]">
+                        <thead><tr class="bg-sundari-cream text-sundari-purple font-semibold text-xs uppercase tracking-wider border-b border-sundari-gold/20">
+                            <th class="py-3 px-3">Purchase ID</th><th class="py-3 px-3">Date</th><th class="py-3 px-3">Vendor</th><th class="py-3 px-3">Styles</th><th class="py-3 px-3 text-right">Total (₹)</th>
+                        </tr></thead>
+                        <tbody id="purchase-orders-table-body" class="divide-y divide-gray-100 text-gray-700"></tbody>
+                    </table>
+                    <div id="purchase-orders-empty" class="hidden py-12 text-center text-sm text-gray-400">No purchase orders for this vendor yet. Add new inventory to create one.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: ORDERS LOG VIEW -->
+        <section id="view-orders" class="hidden">
+            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                    <div>
+                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Sales Orders Log</h2>
+                        <p class="text-xs text-gray-500">Internal orders logged and stock decremented · Select an order to view its items</p>
+                    </div>
+                    <button onclick="switchView('inventory')" class="text-xs text-sundari-purple font-bold hover:underline">
+                        &larr; Back to Inventory
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-sundari-cream text-sundari-purple font-semibold text-xs uppercase tracking-wider border-b border-sundari-gold/20">
+                                <th class="py-3 px-4">Order ID</th>
+                                <th class="py-3 px-4">Date & Time</th>
+                                <th class="py-3 px-4">Customer Name</th>
+                                <th class="py-3 px-4">Contact Number</th>
+                                <th class="py-3 px-4">Address</th>
+                                <th class="py-3 px-4 text-right">Total / Payment</th>
+                                <th class="py-3 px-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body" class="divide-y divide-gray-100 text-gray-700">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: PREORDERS & REQUESTS VIEW -->
+        <section id="view-preorders" class="hidden">
+            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-gray-100 gap-2">
+                    <div>
+                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Preorders & Custom Requests</h2>
+                        <p class="text-xs text-gray-500">Pending restocks or custom saree/garment reservations</p>
+                    </div>
+                    <button onclick="openModal('add-preorder-modal')" class="px-3 py-2 bg-sundari-gold text-sundari-purple font-bold rounded-xl text-xs hover:bg-sundari-goldDark hover:text-white transition">
+                        + Log Preorder Request
+                    </button>
+                </div>
+
+                <div id="preorder-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Preorder cards injected here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FLOATING CART BUTTON (Fixed Bottom Right) -->
+    <div class="fixed bottom-5 right-5 z-40">
+        <button id="cart-float-btn" onclick="toggleCartModal()" class="relative bg-sundari-purple text-sundari-gold hover:bg-sundari-purpleDark p-4 rounded-full shadow-2xl transition-all transform hover:scale-105 active:scale-95 border-2 border-sundari-gold flex items-center justify-center">
+            <i class="fa-solid fa-cart-shopping text-2xl"></i>
+            <!-- Cart Count Badge -->
+            <span id="cart-count-badge" class="absolute -top-1 -right-1 bg-sundari-gold text-sundari-purple text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow">
+                0
+            </span>
+        </button>
+    </div>
+
+    <!-- MODAL 1: CART & PLACE ORDER SLIDE-OVER -->
+    <div id="cart-modal" class="fixed inset-0 z-50 hidden overflow-hidden bg-black/50 backdrop-blur-sm transition-opacity">
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-sundari-gold/30">
+                <!-- Modal Header -->
+                <div class="p-4 bg-sundari-purple text-white flex items-center justify-between border-b border-sundari-gold/40">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-bag-shopping text-sundari-gold"></i>
+                        <h3 class="font-brand text-lg font-bold">Internal Order Cart</h3>
+                    </div>
+                    <button onclick="toggleCartModal()" class="text-gray-300 hover:text-white p-1">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Cart Items List -->
+                <div id="cart-items-container" class="p-4 flex-grow overflow-y-auto divide-y divide-gray-100">
+                    <!-- Dynamic Cart Items -->
+                </div>
+
+                <!-- Order Checkout Form -->
+                <div class="p-4 bg-sundari-cream border-t border-sundari-gold/30 space-y-2.5 max-h-[55vh] overflow-y-auto">
+                    <div class="space-y-2 text-xs">
+                        <div>
+                            <label class="block font-semibold text-sundari-purple mb-1">Customer Name *</label>
+                            <input type="text" id="order-customer-name" required autocomplete="name" placeholder="Customer name" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-sundari-purple mb-1">Phone Number *</label>
+                            <input type="tel" id="order-customer-number" required autocomplete="tel" inputmode="tel" pattern="[0-9+() -]{7,20}" placeholder="Phone number" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-sundari-purple mb-1">Address</label>
+                            <textarea id="order-customer-address" rows="2" autocomplete="street-address" placeholder="Optional delivery address" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block font-semibold text-sundari-purple mb-1">Shipping Charges (₹)</label>
+                                <input type="number" id="order-shipping-charge" min="0" step="0.01" value="0" oninput="updateCartUI()" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-sundari-purple mb-1">Payment Method</label>
+                                <select id="order-payment-type" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none">
+                                    <option value="Cash">Cash</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Store Credit">Store Credit</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-sundari-gold/20 pt-2 space-y-1 text-xs">
+                        <div class="flex justify-between text-gray-600"><span>Items subtotal</span><span id="cart-items-subtotal">₹0</span></div>
+                        <div class="flex justify-between text-gray-600"><span>Shipping</span><span id="cart-shipping-total">₹0</span></div>
+                        <div class="flex items-center justify-between text-base font-bold text-sundari-purple"><span>Total Payable:</span><span id="cart-total-price" class="text-lg text-sundari-goldDark">₹0</span></div>
+                    </div>
+
+                    <button onclick="processOrder()" class="w-full py-3 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow-lg hover:bg-sundari-purpleDark active:scale-[0.98] transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span>Confirm & Adjust Stock</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIZE SELECTION BEFORE ADDING A PRODUCT TO THE CART -->
+    <div id="size-selection-modal" class="fixed inset-0 z-[60] hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full custom-shadow overflow-hidden border border-sundari-gold/40">
+            <div class="bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Choose a size</p><h3 id="size-picker-product-name" class="font-bold text-sm"></h3></div>
+                <button onclick="closeModal('size-selection-modal')" aria-label="Close size picker" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="size-picker-options" class="p-4 grid grid-cols-2 gap-2"></div>
+            <div id="size-picker-note" class="px-4 pb-4 text-[11px] text-gray-500"></div>
+        </div>
+    </div>
+
+    <!-- ORDER DETAILS POPUP -->
+    <div id="order-detail-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
+                <button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- PURCHASE ORDER DETAILS POPUP -->
+    <div id="purchase-order-detail-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Purchase order</p><h3 id="purchase-order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
+                <button onclick="closeModal('purchase-order-detail-modal')" aria-label="Close purchase order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="purchase-order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD NEW INVENTORY -->
+    <div id="add-inventory-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] custom-shadow overflow-y-auto border border-sundari-gold/40 my-1 sm:my-2">
+            <div class="sticky top-0 z-10 bg-sundari-purple p-4 text-white flex justify-between items-center border-b border-sundari-gold/30">
+                <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-plus-circle mr-2"></i>Receive Vendor Stock</h3>
+                <button onclick="closeModal('add-inventory-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <form id="add-garment-form" onsubmit="handleAddInventory(event)" class="p-3 sm:p-4 space-y-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-sundari-purple mb-1">Vendor *</label>
+                        <select id="inv-vendor" required onchange="toggleNewVendorField()" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                            <option value="">Select a vendor</option>
+                            <option value="__new__">+ Add a new vendor</option>
+                        </select>
+                    </div>
+                    <div id="new-vendor-wrap" class="hidden">
+                        <label class="block font-semibold text-sundari-purple mb-1">New Vendor Name *</label>
+                        <input type="text" id="inv-new-vendor" placeholder="Vendor name" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <div>
+                        <h4 class="font-bold text-sundari-purple text-sm">Items in this vendor entry</h4>
+                        <p class="text-[11px] text-gray-500">Add each style with its own image, costs, and size quantities.</p>
+                    </div>
+                    <button type="button" onclick="addInventoryStyle()" class="px-3 py-2 bg-sundari-gold/15 text-sundari-purple font-bold rounded-xl hover:bg-sundari-gold/25"><i class="fa-solid fa-plus mr-1"></i>Add Style</button>
+                </div>
+                <div id="inventory-style-list" class="space-y-3"></div>
+
+                <template id="inventory-style-template">
+                    <section class="inventory-style border border-sundari-gold/30 rounded-xl p-2.5 space-y-2 bg-sundari-cream/30">
+                        <div class="flex items-center justify-between">
+                            <h5 class="style-heading font-bold text-sundari-purple">Style 1</h5>
+                            <button type="button" onclick="removeInventoryStyle(this)" class="remove-style-btn text-rose-600 hover:text-rose-800 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Remove</button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div><label class="block font-semibold text-sundari-purple mb-1">Item Name (optional)</label><input type="text" data-field="name" placeholder="e.g. Printed cotton kurti" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
+                            <div><label class="block font-semibold text-sundari-purple mb-1">Image URL (optional)</label><input type="url" data-field="image" placeholder="Paste a direct or Google Drive image link" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"><p class="mt-1 text-[10px] text-gray-400">For Drive images, set General access to Anyone with the link · Viewer.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div><label class="block font-semibold text-sundari-purple mb-1">Unit Cost (₹) *</label><input type="number" data-field="unitCost" required min="0.01" step="0.01" placeholder="450" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
+                            <div><label class="block font-semibold text-sundari-purple mb-1">Selling Price (₹) *</label><input type="number" data-field="price" required min="0.01" step="0.01" placeholder="799" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block font-semibold text-sundari-purple">Size quantities *</label>
+                                <button type="button" onclick="addInventorySize(this)" class="text-sundari-purple font-semibold hover:underline">+ Add size</button>
+                            </div>
+                            <div class="size-quantity-list grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                        </div>
+                        <p class="style-total text-[11px] font-semibold text-gray-600">Units: 0 · Item cost: ₹0</p>
+                    </section>
+                </template>
+
+                <div class="border-t border-sundari-gold/20 pt-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div><h4 class="font-bold text-sundari-purple text-sm">Additional charges</h4><p class="text-[11px] text-gray-500">Optional charges for this vendor entry.</p></div>
+                        <button type="button" onclick="addInventoryCharge()" class="px-3 py-2 border border-sundari-gold/40 text-sundari-purple font-semibold rounded-xl hover:bg-sundari-cream">+ Add Charge</button>
+                    </div>
+                    <div id="inventory-charge-list" class="space-y-2"></div>
+                </div>
+                <div class="bg-sundari-purple/5 rounded-xl p-3 text-sm space-y-1">
+                    <div class="flex justify-between"><span>Items subtotal</span><strong id="inv-items-total">₹0</strong></div>
+                    <div class="flex justify-between"><span>Additional charges</span><strong id="inv-charges-total">₹0</strong></div>
+                    <div class="flex justify-between border-t border-sundari-gold/30 pt-1 text-sundari-purple"><span class="font-bold">Total vendor entry</span><strong id="inv-grand-total">₹0</strong></div>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('add-inventory-modal')" class="px-4 py-2 border border-gray-300 rounded-xl text-gray-600 font-semibold hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow hover:bg-sundari-purpleDark transition">Save Vendor Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: PREORDER REQUEST MODAL -->
+    <div id="add-preorder-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full custom-shadow overflow-hidden border border-sundari-gold/40">
+            <div class="bg-sundari-purple p-4 text-white flex justify-between items-center">
+                <h3 class="font-brand text-lg font-bold text-sundari-gold">New Preorder Request</h3>
+                <button onclick="closeModal('add-preorder-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="preorder-form" onsubmit="handleAddPreorder(event)" class="p-5 space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-sundari-purple mb-1">Customer Name *</label>
+                    <input type="text" id="pre-customer" required placeholder="e.g. Ananya Rao" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
+                </div>
+                <div>
+                    <label class="block font-semibold text-sundari-purple mb-1">Garment Request Details *</label>
+                    <textarea id="pre-details" required rows="3" placeholder="e.g. Red Banarasi Silk Saree with heavy Zari border (Size: Free Size)" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block font-semibold text-sundari-purple mb-1">Advance Amount Paid (₹)</label>
+                    <input type="number" id="pre-advance" min="0" placeholder="500" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('add-preorder-modal')" class="px-4 py-2 border rounded-xl text-gray-600 font-semibold">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow">Submit Preorder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: GOOGLE SHEETS CONFIGURATION -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full custom-shadow overflow-hidden border border-sundari-gold/40">
+            <div class="bg-sundari-purple p-4 text-white flex justify-between items-center">
+                <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-file-excel mr-2"></i>Google Sheets Sync Setup</h3>
+                <button onclick="closeModal('settings-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-5 space-y-4 text-xs text-gray-700">
+                <p>Connect this app to Google Sheets to save inventory, size quantities, vendor entries, and sales orders.</p>
+                
+                <div>
+                    <label class="block font-semibold text-sundari-purple mb-1">Google Apps Script Web App URL</label>
+                    <input type="url" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
+                </div>
+
+                <div class="bg-sundari-cream p-3 rounded-xl border border-sundari-gold/30 text-[11px] space-y-1">
+                    <span class="font-bold text-sundari-purple">One-time setup:</span>
+                    <ol class="list-decimal pl-4 space-y-1 text-gray-600">
+                        <li>Open Apps Script from the target Sheet and paste in the updated <code class="bg-white px-1 font-mono">Code.gs</code>.</li>
+                        <li>Select and run <code class="bg-white px-1 font-mono">setupSundariSheets</code> once; approve access to create the three tabs.</li>
+                        <li>Deploy or update the Web app to execute as you, with access set to <strong>Anyone</strong>. Copy its <code class="bg-white px-1 font-mono">/exec</code> URL.</li>
+                        <li>Paste the URL and choose <strong>Check Connection</strong>. If the status is ready, choose <strong>Save &amp; Sync</strong> to save the URL and send existing inventory.</li>
+                    </ol>
+                </div>
+
+                <div class="pt-2 flex flex-wrap justify-between items-center gap-2">
+                    <button type="button" onclick="checkGoogleSheetsConnection()" class="px-3 py-2 border border-sundari-gold/40 text-sundari-purple font-bold rounded-xl hover:bg-sundari-cream">Check Connection</button>
+                    <button type="button" onclick="syncWithGoogleSheets()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl shadow hover:bg-emerald-700">
+                        <i class="fa-solid fa-rotate mr-1"></i> Sync Now
+                    </button>
+                    <button type="button" onclick="saveSheetSettings()" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow">Save &amp; Sync</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed top-20 right-5 z-50 hidden bg-sundari-purple text-sundari-gold px-4 py-3 rounded-xl shadow-2xl border border-sundari-gold/40 flex items-center space-x-2 transition-transform transform translate-y-[-10px]">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-message" class="text-sm font-semibold">Action completed!</span>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-sundari-purple border-t border-sundari-gold/30 py-4 text-center text-xs text-sundari-goldLight/70 mt-8">
+        <p>&copy; 2026 SUNDARI Garment Management System • Internal Use</p>
+    </footer>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // --- INITIAL DATA SEEDING ---
+        const initialProducts = [];
+
+        // --- APP STATE ---
+        let inventory = JSON.parse(localStorage.getItem('sundari_inventory')) || initialProducts;
+        let vendors = JSON.parse(localStorage.getItem('sundari_vendors')) || [];
+        let inventoryEntries = JSON.parse(localStorage.getItem('sundari_inventory_entries')) || [];
+        let cart = JSON.parse(localStorage.getItem('sundari_cart')) || [];
+        let orders = JSON.parse(localStorage.getItem('sundari_orders')) || [];
+        let preorders = JSON.parse(localStorage.getItem('sundari_preorders')) || [];
+        let googleSheetEndpoint = localStorage.getItem('sundari_sheet_url') || '';
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            populateInventoryVendors();
+            populatePurchaseVendorFilter();
+            addInventoryStyle();
+            document.getElementById('inventory-style-list').addEventListener('input', updateInventoryEntryTotals);
+            document.getElementById('inventory-charge-list').addEventListener('input', updateInventoryEntryTotals);
+            filterInventory();
+            updateCartUI();
+            renderOrdersTable();
+            renderPreorders();
+            renderPurchaseOrders();
+            updateStats();
+            if (googleSheetEndpoint) {
+                document.getElementById('google-sheet-url').value = googleSheetEndpoint;
+            }
+        };
+
+        // --- STORAGE SAVERS ---
+        function saveState() {
+            localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+            localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+            localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+            localStorage.setItem('sundari_cart', JSON.stringify(cart));
+            localStorage.setItem('sundari_orders', JSON.stringify(orders));
+            localStorage.setItem('sundari_preorders', JSON.stringify(preorders));
+            updateStats();
+            const dashboard = document.getElementById('view-dashboard');
+            if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
+            const purchaseView = document.getElementById('view-purchase-orders');
+            if (purchaseView && !purchaseView.classList.contains('hidden')) renderPurchaseOrders();
+        }
+
+        function getGoogleDriveImageId(imageUrl) {
+            if (!imageUrl) return '';
+            try {
+                const parsed = new URL(imageUrl);
+                if (!/(^|\.)drive\.google\.com$|(^|\.)docs\.google\.com$/i.test(parsed.hostname)) return '';
+                const pathMatch = parsed.pathname.match(/\/file\/d\/([^/]+)/) || parsed.pathname.match(/\/d\/([^/]+)/);
+                return pathMatch ? pathMatch[1] : (parsed.searchParams.get('id') || '');
+            } catch (_) {
+                return '';
+            }
+        }
+
+        function getEmbeddableImageUrl(imageUrl) {
+            const fileId = getGoogleDriveImageId(imageUrl);
+            return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200` : (imageUrl || '');
+        }
+
+        function getDriveImageFallbackUrl(imageUrl) {
+            const fileId = getGoogleDriveImageId(imageUrl);
+            return fileId ? `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}` : '';
+        }
+
+        function handleProductImageError(image) {
+            if (image.dataset.driveFallbackUrl && image.dataset.driveFallbackTried !== 'true') {
+                image.dataset.driveFallbackTried = 'true';
+                image.src = image.dataset.driveFallbackUrl;
+                return;
+            }
+            image.onerror = null;
+            image.src = image.dataset.placeholderUrl || 'https://placehold.co/120x140/3A1032/D4AF37?text=Item';
+        }
+
+        // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
+        function renderInventoryGrid(itemsToRender = inventory) {
+            const grid = document.getElementById('product-grid');
+            const emptyState = document.getElementById('empty-state');
+            grid.innerHTML = '';
+
+            if (itemsToRender.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            itemsToRender.forEach(product => {
+                const isOutOfStock = product.stock <= 0;
+                const hasSizeBreakdown = product.sizeQuantities && typeof product.sizeQuantities === 'object';
+                const sizeBadges = (product.sizes || []).map(size => {
+                    const availability = getSizeAvailability(product, size);
+                    const sizeDisabled = availability.available <= 0;
+                    return `<span class="px-1.5 py-1 rounded-md border text-[10px] ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
+                        <span class="font-bold">${size}</span> <span>${availability.tracked ? availability.available : `${availability.available} total`}</span>
+                    </span>`;
+                }).join('');
+                
+                const cardHtml = `
+                    <div class="bg-white rounded-2xl border border-sundari-gold/30 overflow-hidden custom-shadow flex flex-col justify-between transition-all duration-200 hover:shadow-lg">
+                        <!-- Product Image & Stock Badge -->
+                        <div class="relative w-full aspect-[4/5] bg-sundari-cream/40 overflow-hidden">
+                            <img src="${getEmbeddableImageUrl(product.image)}" alt="${product.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(product.image)}" data-placeholder-url="https://placehold.co/400x500/3A1032/D4AF37?text=${encodeURIComponent(product.name)}" 
+                                 class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                 onerror="handleProductImageError(this)">
+                            <div class="absolute top-2 right-2">
+                                <span class="px-2 py-0.5 text-[11px] font-bold rounded-full ${isOutOfStock ? 'bg-red-500 text-white' : product.stock < 5 ? 'bg-amber-500 text-white' : 'bg-sundari-purple text-sundari-gold'} shadow">
+                                    ${isOutOfStock ? 'Out of Stock' : 'Stock: ' + product.stock}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Details Body -->
+                        <div class="p-3 flex-grow flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-sm text-sundari-purple line-clamp-1 leading-snug">${product.name}</h3>
+                                <div class="mt-1.5"><p class="text-[10px] font-semibold text-gray-500 mb-1">Size · Qty available</p><div class="flex flex-wrap gap-1">${sizeBadges}</div>${!hasSizeBreakdown ? '<p class="text-[9px] text-gray-400 mt-1">Size level counts are not recorded for this item.</p>' : ''}</div>
+                                <p class="text-sm font-bold text-sundari-goldDark mt-1">Price: ₹${product.price.toLocaleString('en-IN')}</p>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mt-3">
+                                <button onclick="openSizeSelector('${product.id}')" ${isOutOfStock ? 'disabled' : ''} 
+                                        class="w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${isOutOfStock ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-sundari-purple text-sundari-gold hover:bg-sundari-purpleDark active:scale-95 shadow-md'}">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>${isOutOfStock ? 'Sold Out' : 'Add to Order'}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+        }
+
+        // --- CART OPERATIONS ---
+        function getSizeAvailability(product, size) {
+            const tracked = !!(product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, size));
+            const capacity = tracked ? Math.max(0, parseInt(product.sizeQuantities[size], 10) || 0) : Math.max(0, product.stock || 0);
+            const reservedForSize = cart.filter(item => item.id === product.id && item.selectedSize === size).reduce((sum, item) => sum + item.qty, 0);
+            const reservedForProduct = cart.filter(item => item.id === product.id).reduce((sum, item) => sum + item.qty, 0);
+            const reserved = tracked ? reservedForSize : reservedForProduct;
+            return { tracked, capacity, available: Math.max(0, capacity - reserved) };
+        }
+
+        function openSizeSelector(productId) {
+            const product = inventory.find(item => item.id === productId);
+            if (!product || product.stock <= 0) return;
+            document.getElementById('size-picker-product-name').textContent = product.name;
+            const options = document.getElementById('size-picker-options');
+            const sizes = product.sizes && product.sizes.length ? product.sizes : ['Free Size'];
+            options.innerHTML = sizes.map(size => {
+                const availability = getSizeAvailability(product, size);
+                const disabled = availability.available <= 0;
+                const safeSize = encodeURIComponent(size).replace(/'/g, '%27');
+                return `<button type="button" onclick="addToCart('${product.id}', decodeURIComponent('${safeSize}'))" ${disabled ? 'disabled' : ''} class="p-3 rounded-xl border text-left transition ${disabled ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border-sundari-gold/40 text-sundari-purple hover:bg-sundari-cream'}">
+                    <span class="block font-bold">${size}</span><span class="text-[11px]">${availability.tracked ? `${availability.available} available` : `${availability.available} total available`}</span>
+                </button>`;
+            }).join('');
+            document.getElementById('size-picker-note').textContent = product.sizeQuantities ? 'Sizes with no stock are disabled.' : 'Size specific counts are not recorded for this older item; overall stock is used.';
+            openModal('size-selection-modal');
+        }
+
+        function addToCart(productId, selectedSize) {
+            const product = inventory.find(p => p.id === productId);
+            if (!product || product.stock <= 0) return;
+            if (!selectedSize) return openSizeSelector(productId);
+
+            const availability = getSizeAvailability(product, selectedSize);
+            if (availability.available <= 0) return showToast(`No ${selectedSize} stock available.`);
+
+            const existingCartItem = cart.find(item => item.id === productId && item.selectedSize === selectedSize);
+            if (existingCartItem) {
+                if (existingCartItem.qty < availability.capacity) {
+                    existingCartItem.qty += 1;
+                } else {
+                    showToast(`Cannot add more. Only ${availability.capacity} ${selectedSize} available.`);
+                    return;
+                }
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    image: getEmbeddableImageUrl(product.image),
+                    price: product.price,
+                    unitCost: Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null,
+                    selectedSize,
+                    qty: 1,
+                    maxStock: availability.capacity
+                });
+            }
+
+            saveState();
+            closeModal('size-selection-modal');
+            updateCartUI();
+            filterInventory();
+            showToast(`${product.name} (${selectedSize}) added to cart`);
+        }
+
+        function updateCartQty(productId, selectedSize, change) {
+            const item = cart.find(i => i.id === productId && i.selectedSize === selectedSize);
+            if (!item) return;
+            if (change > 0) {
+                const product = inventory.find(p => p.id === productId);
+                if (!product) return;
+                const sizeIsTracked = product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, selectedSize);
+                const used = cart.filter(i => i.id === productId && (sizeIsTracked ? i.selectedSize === selectedSize : true)).reduce((sum, i) => sum + i.qty, 0);
+                const limit = sizeIsTracked ? (parseInt(product.sizeQuantities[selectedSize], 10) || 0) : product.stock;
+                if (used >= limit) return showToast(`No more ${selectedSize} stock available.`);
+            }
+            item.qty += change;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => !(i.id === productId && i.selectedSize === selectedSize));
+            } else if (item.qty > item.maxStock) {
+                item.qty = item.maxStock;
+                showToast(`Maximum stock limit (${item.maxStock}) reached.`);
+            }
+            saveState();
+            updateCartUI();
+            filterInventory();
+        }
+
+        function updateCartUI() {
+            const badge = document.getElementById('cart-count-badge');
+            const container = document.getElementById('cart-items-container');
+            const totalPriceEl = document.getElementById('cart-total-price');
+
+            const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+            const itemsSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const shippingCharge = Math.max(0, parseFloat(document.getElementById('order-shipping-charge').value) || 0);
+            const totalPrice = itemsSubtotal + shippingCharge;
+
+            badge.innerText = totalItems;
+            document.getElementById('cart-items-subtotal').innerText = formatRupees(itemsSubtotal);
+            document.getElementById('cart-shipping-total').innerText = formatRupees(shippingCharge);
+            totalPriceEl.innerText = formatRupees(totalPrice);
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="py-12 text-center text-gray-400">
+                        <i class="fa-solid fa-cart-flatbed text-4xl mb-2 text-sundari-gold/40"></i>
+                        <p class="text-xs">Cart is currently empty.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = cart.map(item => `
+                <div class="py-3 flex items-center gap-3 text-xs">
+                    <img src="${getEmbeddableImageUrl(item.image || '')}" alt="${item.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="https://placehold.co/120x140/3A1032/D4AF37?text=Item" class="w-14 h-16 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
+                    <div class="flex-1 min-w-0 pr-1">
+                        <h4 class="font-bold text-sundari-purple truncate">${item.name}</h4>
+                        <p class="text-sundari-goldDark font-semibold">Selected size: ${item.selectedSize}</p>
+                        <p class="text-gray-500">₹${Number(item.price).toLocaleString('en-IN')} x ${item.qty}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateCartQty('${item.id}', decodeURIComponent('${encodeURIComponent(item.selectedSize).replace(/'/g, '%27')}'), -1)" class="w-6 h-6 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center hover:bg-gray-200">-</button>
+                        <span class="font-bold text-sundari-textDark">${item.qty}</span>
+                        <button onclick="updateCartQty('${item.id}', decodeURIComponent('${encodeURIComponent(item.selectedSize).replace(/'/g, '%27')}'), 1)" class="w-6 h-6 rounded-lg bg-gray-100 font-bold text-gray-600 flex items-center justify-center hover:bg-gray-200">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- PROCESS & ADJUST STOCK ORDER ---
+        function processOrder() {
+            if (cart.length === 0) {
+                showToast("Cart is empty!");
+                return;
+            }
+
+            const customerName = document.getElementById('order-customer-name').value.trim();
+            const customerNumberInput = document.getElementById('order-customer-number');
+            const customerNumber = customerNumberInput.value.trim();
+            const customerAddress = document.getElementById('order-customer-address').value.trim();
+            if (!customerName) {
+                document.getElementById('order-customer-name').reportValidity();
+                return;
+            }
+            if (!customerNumber || customerNumber.replace(/\D/g, '').length < 7 || !customerNumberInput.checkValidity()) {
+                customerNumberInput.reportValidity();
+                if (customerNumberInput.checkValidity()) showToast('Enter a valid phone number with at least 7 digits.');
+                return;
+            }
+            const paymentType = document.getElementById('order-payment-type').value;
+            const shippingCharge = Math.max(0, parseFloat(document.getElementById('order-shipping-charge').value) || 0);
+            const itemsSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            // 1. Decrement Stock from Inventory
+            cart.forEach(cartItem => {
+                const invProduct = inventory.find(p => p.id === cartItem.id);
+                if (invProduct) {
+                    invProduct.stock = Math.max(0, invProduct.stock - cartItem.qty);
+                    if (invProduct.sizeQuantities && Object.prototype.hasOwnProperty.call(invProduct.sizeQuantities, cartItem.selectedSize)) {
+                        invProduct.sizeQuantities[cartItem.selectedSize] = Math.max(0, (parseInt(invProduct.sizeQuantities[cartItem.selectedSize], 10) || 0) - cartItem.qty);
+                    }
+                }
+            });
+
+            // 2. Log Order
+            const newOrder = {
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
+                customer: customerName,
+                customerNumber,
+                customerAddress,
+                items: cart.map(i => `${i.name} (${i.selectedSize}) x ${i.qty}`).join(', '),
+                lineItems: cart.map(item => {
+                    const inventoryProduct = inventory.find(product => product.id === item.id);
+                    const unitCost = item.unitCost !== undefined && item.unitCost !== null
+                        ? Number(item.unitCost)
+                        : Number(inventoryProduct?.unitCost);
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        image: item.image || inventoryProduct?.image || '',
+                        size: item.selectedSize,
+                        quantity: item.qty,
+                        price: Number(item.price) || 0,
+                        unitCost: Number.isFinite(unitCost) ? unitCost : null
+                    };
+                }),
+                itemsSubtotal,
+                shipping: shippingCharge,
+                paymentType,
+                total: itemsSubtotal + shippingCharge,
+                status: 'Completed'
+            };
+
+            orders.unshift(newOrder);
+
+            // 3. Optional Google Sheets Push
+            if (googleSheetEndpoint) {
+                pushOrderToGoogleSheet(newOrder);
+            }
+
+            // Reset Cart & Close Modal
+            cart = [];
+            document.getElementById('order-customer-name').value = '';
+            document.getElementById('order-customer-number').value = '';
+            document.getElementById('order-customer-address').value = '';
+            document.getElementById('order-shipping-charge').value = '0';
+            saveState();
+            updateCartUI();
+            filterInventory();
+            renderOrdersTable();
+            syncInventoryWithGoogleSheets(null, true);
+            toggleCartModal();
+            showToast(`Order ${newOrder.id} confirmed & stock updated!`);
+        }
+
+        // --- VENDOR INVENTORY ENTRY ---
+        function populateInventoryVendors() {
+            const select = document.getElementById('inv-vendor');
+            select.querySelectorAll('option:not([value=""]):not([value="__new__"])').forEach(option => option.remove());
+            vendors.forEach(vendor => {
+                const option = document.createElement('option');
+                option.value = vendor;
+                option.textContent = vendor;
+                select.insertBefore(option, select.querySelector('option[value="__new__"]'));
+            });
+        }
+
+        function populatePurchaseVendorFilter() {
+            const select = document.getElementById('purchase-vendor-filter');
+            const selectedVendor = select.value || 'all';
+            const availableVendors = [...new Set([...vendors, ...inventoryEntries.map(entry => entry.vendor).filter(Boolean)])]
+                .sort((a, b) => a.localeCompare(b));
+            select.innerHTML = '<option value="all">All vendors</option>';
+            availableVendors.forEach(vendor => select.add(new Option(vendor, vendor)));
+            select.value = availableVendors.includes(selectedVendor) ? selectedVendor : 'all';
+        }
+
+        function renderPurchaseOrders() {
+            const select = document.getElementById('purchase-vendor-filter');
+            const selectedVendor = select.value || 'all';
+            const tbody = document.getElementById('purchase-orders-table-body');
+            const emptyState = document.getElementById('purchase-orders-empty');
+            const entries = inventoryEntries
+                .filter(entry => selectedVendor === 'all' || entry.vendor === selectedVendor)
+                .slice()
+                .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+            tbody.innerHTML = entries.map(entry => {
+                const styles = getPurchaseEntryStyles(entry);
+                const styleImages = styles.length ? `<div class="flex items-center gap-2">${styles.slice(0, 3).map(style => `
+                    <img src="${getEmbeddableImageUrl(style.image || '')}" alt="${style.name || 'Inventory style'}" title="${style.name || 'Inventory style'}" data-drive-fallback-url="${getDriveImageFallbackUrl(style.image || '')}" data-placeholder-url="https://placehold.co/64x72/3A1032/D4AF37?text=Item" class="w-8 h-10 rounded-md object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
+                `).join('')}${styles.length > 3 ? `<span class="text-[10px] text-gray-500 whitespace-nowrap">+${styles.length - 3} more</span>` : ''}</div>` : 'No styles recorded';
+                return `<tr role="button" tabindex="0" onclick="openPurchaseOrderDetails('${entry.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPurchaseOrderDetails('${entry.id}')}" aria-label="View purchase order ${entry.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition">
+                    <td class="py-3 px-3 font-bold text-sundari-purple">${entry.id || '—'}</td>
+                    <td class="py-3 px-3 text-xs text-gray-500">${formatDashboardDate(entry.date)}</td>
+                    <td class="py-3 px-3 font-semibold">${entry.vendor || '—'}</td>
+                    <td class="py-3 px-3">${styleImages}</td>
+                    <td class="py-3 px-3 text-right font-bold text-sundari-goldDark whitespace-nowrap">${formatRupees(Number(entry.grandTotal) || 0)}</td>
+                </tr>`;
+            }).join('');
+            emptyState.classList.toggle('hidden', entries.length > 0);
+            tbody.classList.toggle('hidden', entries.length === 0);
+        }
+
+        function getPurchaseEntryStyles(entry) {
+            return (entry.items || []).map(item => {
+                const product = inventory.find(candidate => candidate.id === item.id);
+                return {
+                    ...product,
+                    ...item,
+                    name: item.name || product?.name || 'Unnamed style',
+                    image: item.image || product?.image || '',
+                    sizes: item.sizes || product?.sizes || [],
+                    sizeQuantities: item.sizeQuantities || null
+                };
+            });
+        }
+
+        function openPurchaseOrderDetails(entryId) {
+            const entry = inventoryEntries.find(item => item.id === entryId);
+            if (!entry) return;
+            const styles = getPurchaseEntryStyles(entry);
+            const itemSubtotal = Number(entry.itemSubtotal) || styles.reduce((sum, style) => sum + (Number(style.unitCost) || 0) * (Number(style.stock) || 0), 0);
+            const charges = (entry.charges || []).filter(charge => Number(charge.amount) > 0);
+            const chargeTotal = Number(entry.chargeTotal) || charges.reduce((sum, charge) => sum + Number(charge.amount), 0);
+            document.getElementById('purchase-order-detail-title').textContent = entry.id || 'Purchase details';
+            document.getElementById('purchase-order-detail-content').innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Vendor</p><p>${entry.vendor || '—'}</p></div>
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Purchase date</p><p>${formatDashboardDate(entry.date)}</p></div>
+                </div>
+                <div><h4 class="font-bold text-sundari-purple mb-2">Styles received</h4>
+                    <div class="divide-y divide-gray-100 border-y border-gray-100">${styles.length ? styles.map(style => {
+                        const sizes = style.sizeQuantities
+                            ? Object.entries(style.sizeQuantities).map(([size, quantity]) => `${size}: ${quantity}`).join(' · ')
+                            : (style.sizes || []).join(', ');
+                        return `<div class="py-3 flex items-center gap-3">
+                            <img src="${getEmbeddableImageUrl(style.image || '')}" alt="${style.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(style.image || '')}" data-placeholder-url="https://placehold.co/120x140/3A1032/D4AF37?text=Item" class="w-16 h-20 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
+                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${style.name}</p><p class="text-xs text-gray-600">${style.sizeQuantities ? `Size quantities: ${sizes || 'not recorded'}` : `Sizes: ${sizes || 'not recorded'} · size quantities not recorded`}</p><p class="text-[11px] text-gray-500">${Number(style.stock) || 0} units · Unit cost ${formatRupees(Number(style.unitCost) || 0)}</p></div>
+                            <strong class="text-sm text-sundari-goldDark">${formatRupees((Number(style.unitCost) || 0) * (Number(style.stock) || 0))}</strong>
+                        </div>`;
+                    }).join('') : '<p class="py-4 text-xs text-gray-400">No style details were saved for this purchase.</p>'}</div>
+                </div>
+                <div class="ml-auto max-w-xs space-y-1 text-sm">
+                    <div class="flex justify-between gap-6 text-gray-600"><span>Items subtotal</span><span>${formatRupees(itemSubtotal)}</span></div>
+                    ${charges.map(charge => `<div class="flex justify-between gap-6 text-gray-600"><span>${charge.description || 'Additional charge'}</span><span>${formatRupees(Number(charge.amount) || 0)}</span></div>`).join('')}
+                    <div class="flex justify-between gap-6 text-gray-600"><span>Additional charges</span><span>${formatRupees(chargeTotal)}</span></div>
+                    <div class="flex justify-between gap-6 border-t border-sundari-gold/30 pt-2 font-bold text-sundari-purple"><span>Total</span><span>${formatRupees(Number(entry.grandTotal) || itemSubtotal + chargeTotal)}</span></div>
+                </div>
+            `;
+            openModal('purchase-order-detail-modal');
+        }
+
+        function toggleNewVendorField() {
+            const isNew = document.getElementById('inv-vendor').value === '__new__';
+            const wrapper = document.getElementById('new-vendor-wrap');
+            const input = document.getElementById('inv-new-vendor');
+            wrapper.classList.toggle('hidden', !isNew);
+            input.required = isNew;
+            if (!isNew) input.value = '';
+        }
+
+        function addInventoryStyle() {
+            const template = document.getElementById('inventory-style-template');
+            const card = template.content.firstElementChild.cloneNode(true);
+            const sizes = card.querySelector('.size-quantity-list');
+            ['M', 'L', 'XL', 'XXL'].forEach(size => sizes.insertAdjacentHTML('beforeend', inventorySizeRow(size)));
+            document.getElementById('inventory-style-list').appendChild(card);
+            refreshInventoryStyleCards();
+            updateInventoryEntryTotals();
+        }
+
+        function inventorySizeRow(size = '', quantity = 0) {
+            return `<div class="size-quantity-row flex items-center gap-1.5">
+                <input type="text" value="${size}" placeholder="Size" aria-label="Size" required class="size-name min-w-0 w-1/2 p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                <input type="number" value="${quantity}" min="0" step="1" placeholder="Qty" aria-label="Quantity" required class="size-qty min-w-0 w-1/2 p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                <button type="button" onclick="removeInventorySize(this)" aria-label="Remove size" class="text-gray-400 hover:text-red-600 px-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>`;
+        }
+
+        function addInventorySize(button) {
+            button.closest('.inventory-style').querySelector('.size-quantity-list').insertAdjacentHTML('beforeend', inventorySizeRow('', 0));
+            updateInventoryEntryTotals();
+        }
+
+        function removeInventorySize(button) {
+            const list = button.closest('.size-quantity-list');
+            if (list.children.length <= 1) return showToast('Each style needs at least one size.');
+            button.closest('.size-quantity-row').remove();
+            updateInventoryEntryTotals();
+        }
+
+        function removeInventoryStyle(button) {
+            const list = document.getElementById('inventory-style-list');
+            if (list.children.length <= 1) return showToast('Keep at least one style in the entry.');
+            button.closest('.inventory-style').remove();
+            refreshInventoryStyleCards();
+            updateInventoryEntryTotals();
+        }
+
+        function refreshInventoryStyleCards() {
+            const cards = [...document.querySelectorAll('#inventory-style-list .inventory-style')];
+            cards.forEach((card, index) => {
+                card.querySelector('.style-heading').textContent = `Style ${index + 1}`;
+                card.querySelector('.remove-style-btn').classList.toggle('invisible', cards.length === 1);
+            });
+        }
+
+        function addInventoryCharge() {
+            const row = document.createElement('div');
+            row.className = 'inventory-charge-row grid grid-cols-[1fr_8rem_auto] gap-2';
+            row.innerHTML = `<input type="text" placeholder="Charge (e.g. Shipping)" aria-label="Charge description" class="charge-description min-w-0 p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
+                <input type="number" min="0" step="0.01" value="0" aria-label="Charge amount" class="charge-amount min-w-0 p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
+                <button type="button" onclick="removeInventoryCharge(this)" aria-label="Remove charge" class="px-2 text-gray-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>`;
+            document.getElementById('inventory-charge-list').appendChild(row);
+            updateInventoryEntryTotals();
+        }
+
+        function removeInventoryCharge(button) {
+            button.closest('.inventory-charge-row').remove();
+            updateInventoryEntryTotals();
+        }
+
+        function getInventoryEntryDraft() {
+            const styles = [...document.querySelectorAll('#inventory-style-list .inventory-style')].map(card => {
+                const sizes = [...card.querySelectorAll('.size-quantity-row')].map(row => ({
+                    size: row.querySelector('.size-name').value.trim(),
+                    quantity: Math.max(0, parseInt(row.querySelector('.size-qty').value, 10) || 0)
+                })).filter(row => row.size);
+                const stock = sizes.reduce((sum, row) => sum + row.quantity, 0);
+                const unitCost = parseFloat(card.querySelector('[data-field="unitCost"]').value) || 0;
+                return { card, name: card.querySelector('[data-field="name"]').value.trim(), image: card.querySelector('[data-field="image"]').value.trim(), unitCost, price: parseFloat(card.querySelector('[data-field="price"]').value) || 0, sizes, stock, itemTotal: unitCost * stock };
+            });
+            const charges = [...document.querySelectorAll('#inventory-charge-list .inventory-charge-row')].map(row => ({
+                description: row.querySelector('.charge-description').value.trim() || 'Additional charge',
+                amount: parseFloat(row.querySelector('.charge-amount').value) || 0
+            }));
+            const itemSubtotal = styles.reduce((sum, style) => sum + style.itemTotal, 0);
+            const chargeTotal = charges.reduce((sum, charge) => sum + charge.amount, 0);
+            return { styles, charges, itemSubtotal, chargeTotal, grandTotal: itemSubtotal + chargeTotal };
+        }
+
+        function formatRupees(amount) {
+            return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        }
+
+        function updateInventoryEntryTotals() {
+            const draft = getInventoryEntryDraft();
+            draft.styles.forEach(style => {
+                style.card.querySelector('.style-total').textContent = `Units: ${style.stock} · Item cost: ${formatRupees(style.itemTotal)}`;
+            });
+            document.getElementById('inv-items-total').textContent = formatRupees(draft.itemSubtotal);
+            document.getElementById('inv-charges-total').textContent = formatRupees(draft.chargeTotal);
+            document.getElementById('inv-grand-total').textContent = formatRupees(draft.grandTotal);
+        }
+
+        function handleAddInventory(e) {
+            e.preventDefault();
+            const selectedVendor = document.getElementById('inv-vendor').value;
+            const vendor = selectedVendor === '__new__' ? document.getElementById('inv-new-vendor').value.trim() : selectedVendor;
+            const draft = getInventoryEntryDraft();
+            if (!vendor) return showToast('Select or enter a vendor.');
+            if (draft.styles.some(style => !style.stock)) return showToast('Enter at least one unit for every style.');
+            if (draft.charges.some(charge => charge.amount > 0 && charge.description === 'Additional charge')) return showToast('Add a description for each additional charge.');
+
+            if (!vendors.some(existing => existing.toLowerCase() === vendor.toLowerCase())) vendors.push(vendor);
+            const entryId = `VEN-${Date.now()}`;
+            const newProducts = draft.styles.map((style, index) => {
+                const sizeQuantities = Object.fromEntries(style.sizes.map(row => [row.size, row.quantity]));
+                return {
+                    id: `SU${Date.now()}-${index + 1}`,
+                    name: style.name || `Unnamed Style ${index + 1}`,
+                    category: 'Uncategorized',
+                    sizes: style.sizes.map(row => row.size),
+                    sizeQuantities,
+                    price: style.price,
+                    unitCost: style.unitCost,
+                    stock: style.stock,
+                    image: style.image ? getEmbeddableImageUrl(style.image) : 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=500&q=80',
+                    vendor,
+                    inventoryEntryId: entryId
+                };
+            });
+            const entry = { id: entryId, vendor, date: new Date().toISOString(), items: newProducts.map(({ id, name, stock, unitCost, sizes, sizeQuantities, price, image }) => ({ id, name, stock, unitCost, sizes, sizeQuantities, price, image })), charges: draft.charges.filter(charge => charge.amount > 0), itemSubtotal: draft.itemSubtotal, chargeTotal: draft.chargeTotal, grandTotal: draft.grandTotal };
+
+            inventory.unshift(...newProducts);
+            inventoryEntries.unshift(entry);
+            saveState();
+            populateInventoryVendors();
+            populatePurchaseVendorFilter();
+            renderPurchaseOrders();
+            filterInventory();
+            closeModal('add-inventory-modal');
+            document.getElementById('add-garment-form').reset();
+            document.getElementById('inventory-style-list').innerHTML = '';
+            document.getElementById('inventory-charge-list').innerHTML = '';
+            document.getElementById('new-vendor-wrap').classList.add('hidden');
+            addInventoryStyle();
+            if (googleSheetEndpoint) {
+                syncInventoryWithGoogleSheets(entry, true).then(sent => {
+                    showToast(sent
+                        ? `${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved for ${vendor}. Total: ${formatRupees(draft.grandTotal)} · Sync request sent.`
+                        : `Inventory saved locally, but the Google Sheets sync request failed.`);
+                });
+            } else {
+                showToast(`${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved locally for ${vendor}. Add a Google Sheets URL in Sync Google Sheets to enable automatic sync.`);
+            }
+        }
+
+        // --- PREORDER HANDLER ---
+        function handleAddPreorder(e) {
+            e.preventDefault();
+            const customer = document.getElementById('pre-customer').value.trim();
+            const details = document.getElementById('pre-details').value.trim();
+            const advance = parseFloat(document.getElementById('pre-advance').value) || 0;
+
+            const newPreorder = {
+                id: 'PRE-' + Math.floor(500 + Math.random() * 500),
+                customer,
+                details,
+                advance,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            preorders.unshift(newPreorder);
+            saveState();
+            renderPreorders();
+            closeModal('add-preorder-modal');
+            document.getElementById('preorder-form').reset();
+            showToast("Preorder request logged successfully!");
+        }
+
+        // --- RENDER TABLES & VIEWS ---
+        function renderOrdersTable() {
+            const tbody = document.getElementById('orders-table-body');
+            tbody.innerHTML = orders.map(ord => `
+                <tr role="button" tabindex="0" onclick="openOrderDetails('${ord.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${ord.id}')}" aria-label="View details for order ${ord.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition">
+                    <td class="py-3 px-4 font-bold text-sundari-purple">${ord.id}</td>
+                    <td class="py-3 px-4 text-xs text-gray-500">${ord.date}</td>
+                    <td class="py-3 px-4 font-medium">${ord.customer || 'Walk-in Customer'}</td>
+                    <td class="py-3 px-4 text-xs">${ord.customerNumber || '—'}</td>
+                    <td class="py-3 px-4 text-xs max-w-48 truncate" title="${ord.customerAddress || ''}">${ord.customerAddress || '—'}</td>
+                    <td class="py-3 px-4 text-right font-bold text-sundari-goldDark whitespace-nowrap">${formatRupees(Number(ord.total) || 0)}<div class="text-[10px] text-gray-500 font-normal">${ord.paymentType || 'Payment mode not recorded'}${Number(ord.shipping) > 0 ? ` · includes ${formatRupees(Number(ord.shipping))} shipping` : ''}</div></td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                            ${ord.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getOrderLineItems(order) {
+            if (Array.isArray(order.lineItems) && order.lineItems.length) return order.lineItems;
+            const legacyItems = String(order.items || '').split(/,\s*/).filter(Boolean);
+            const parsed = legacyItems.map(text => {
+                const match = text.match(/^(.*?)\s+\((.*?)\)\s+x\s+(\d+)$/i);
+                if (!match) return null;
+                const [, name, size, quantityText] = match;
+                const product = inventory.find(item => item.name === name);
+                return { id: product?.id, name, image: product?.image || '', size, quantity: Number(quantityText), price: Number(product?.price) || 0, unitCost: Number.isFinite(Number(product?.unitCost)) ? Number(product.unitCost) : null };
+            }).filter(Boolean);
+            return parsed.length ? parsed : (order.items ? [{ name: order.items, image: '', size: 'Not recorded', quantity: 1, price: Number(order.itemsSubtotal ?? order.total) || 0, unitCost: null }] : []);
+        }
+
+        function openOrderDetails(orderId) {
+            const order = orders.find(item => item.id === orderId);
+            if (!order) return;
+            const lineItems = getOrderLineItems(order);
+            const itemSubtotal = Number(order.itemsSubtotal ?? (Number(order.total) - (Number(order.shipping) || 0))) || 0;
+            const shipping = Number(order.shipping) || 0;
+            document.getElementById('order-detail-title').textContent = order.id;
+            document.getElementById('order-detail-content').innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Customer</p><p>${order.customer || 'Walk-in Customer'}</p><p class="text-gray-500">${order.customerNumber || 'Contact not recorded'}</p>${order.customerAddress ? `<p class="mt-1 text-gray-500">${order.customerAddress}</p>` : ''}</div>
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Order</p><p>${order.date || 'Date not recorded'}</p><p class="text-gray-500">${order.paymentType || 'Payment mode not recorded'}</p><p class="text-gray-500">${order.status || 'Completed'}</p></div>
+                </div>
+                <div><h4 class="font-bold text-sundari-purple mb-2">Items ordered</h4>
+                    <div class="divide-y divide-gray-100 border-y border-gray-100">${lineItems.length ? lineItems.map(item => `
+                        <div class="py-3 flex items-center gap-3">
+                            <img src="${getEmbeddableImageUrl(item.image || '')}" alt="${item.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="https://placehold.co/120x140/3A1032/D4AF37?text=Item" class="w-14 h-16 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
+                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${item.name}</p><p class="text-xs text-gray-500">Size: ${item.size || item.selectedSize || 'Not recorded'} · Qty: ${Number(item.quantity ?? item.qty) || 1}</p><p class="text-[11px] text-gray-500">${formatRupees(Number(item.price) || 0)} each</p></div>
+                            <strong class="text-sm text-sundari-goldDark">${formatRupees((Number(item.price) || 0) * (Number(item.quantity ?? item.qty) || 1))}</strong>
+                        </div>
+                    `).join('') : '<p class="py-4 text-xs text-gray-400">No item details were saved for this order.</p>'}</div>
+                </div>
+                <div class="ml-auto max-w-xs space-y-1 text-sm">
+                    <div class="flex justify-between gap-6 text-gray-600"><span>Items subtotal</span><span>${formatRupees(itemSubtotal)}</span></div>
+                    <div class="flex justify-between gap-6 text-gray-600"><span>Shipping</span><span>${formatRupees(shipping)}</span></div>
+                    <div class="flex justify-between gap-6 border-t border-sundari-gold/30 pt-2 font-bold text-sundari-purple"><span>Total</span><span>${formatRupees(Number(order.total) || 0)}</span></div>
+                </div>
+            `;
+            openModal('order-detail-modal');
+        }
+
+        function renderPreorders() {
+            const container = document.getElementById('preorder-cards');
+            container.innerHTML = preorders.map(pre => `
+                <div class="p-4 bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-sundari-purple">${pre.customer}</span>
+                        <span class="text-[10px] bg-sundari-gold/20 text-sundari-purple font-bold px-2 py-0.5 rounded-full">${pre.id}</span>
+                    </div>
+                    <p class="text-xs text-gray-700">${pre.details}</p>
+                    <div class="flex justify-between items-center text-xs pt-2 border-t border-sundari-gold/20">
+                        <span class="text-gray-500">Date: ${pre.date}</span>
+                        <span class="font-bold text-emerald-700">Advance: ₹${pre.advance}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterInventory() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const stockFilter = document.getElementById('inventory-stock-filter').value;
+            const sizeFilter = document.getElementById('inventory-size-filter').value;
+            const filtered = inventory.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query) ||
+                    p.id.toLowerCase().includes(query) ||
+                    p.category.toLowerCase().includes(query) ||
+                    (p.sizes || []).some(size => size.toLowerCase().includes(query));
+                const inStock = Number(p.stock) > 0;
+                const matchesStock = stockFilter === 'all' ||
+                    (stockFilter === 'available' && inStock) ||
+                    (stockFilter === 'out-of-stock' && !inStock);
+                const matchesSize = sizeFilter === 'all' || getSizeAvailability(p, sizeFilter).available > 0;
+                return matchesSearch && matchesStock && matchesSize;
+            });
+            renderInventoryGrid(filtered);
+        }
+
+        function getOrderRevenue(order) {
+            if (order.itemsSubtotal !== undefined && order.itemsSubtotal !== null) return Number(order.itemsSubtotal) || 0;
+            return Math.max(0, (Number(order.total) || 0) - (Number(order.shipping) || 0));
+        }
+
+        function calculateProfitLoss() {
+            let revenue = 0;
+            let costOfGoodsSold = 0;
+            let unitsSold = 0;
+            let unitsWithCost = 0;
+            orders.forEach(order => {
+                revenue += getOrderRevenue(order);
+                getOrderLineItems(order).forEach(item => {
+                    const quantity = Math.max(1, Number(item.quantity ?? item.qty) || 1);
+                    unitsSold += quantity;
+                    if (item.unitCost !== undefined && item.unitCost !== null && Number.isFinite(Number(item.unitCost))) {
+                        costOfGoodsSold += Number(item.unitCost) * quantity;
+                        unitsWithCost += quantity;
+                    }
+                });
+            });
+            return { value: unitsWithCost ? revenue - costOfGoodsSold : null, unitsSold, unitsWithCost };
+        }
+
+        function renderDashboard() {
+            const salesRevenue = orders.reduce((sum, order) => sum + getOrderRevenue(order), 0);
+            const purchaseTotal = inventoryEntries.reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
+            const stockUnits = inventory.reduce((sum, product) => sum + (Number(product.stock) || 0), 0);
+            const completedOrders = orders.filter(order => !order.status || order.status.toLowerCase() === 'completed').length;
+            const averageOrder = orders.length ? salesRevenue / orders.length : 0;
+            const profitLoss = calculateProfitLoss();
+            const profitTone = profitLoss.value === null ? 'text-gray-600 bg-gray-50' : profitLoss.value < 0 ? 'text-red-700 bg-red-50' : 'text-emerald-700 bg-emerald-50';
+            const profitDetail = profitLoss.unitsWithCost
+                ? `Gross estimate · cost recorded for ${profitLoss.unitsWithCost}/${profitLoss.unitsSold} units`
+                : 'No recorded unit costs for sold items';
+            const metrics = [
+                { label: 'Sales Revenue', value: formatRupees(salesRevenue), detail: `${orders.length} recorded orders`, icon: 'fa-sack-dollar', tone: 'text-emerald-700 bg-emerald-50' },
+                { label: 'Recorded Purchases', value: formatRupees(purchaseTotal), detail: `${inventoryEntries.length} vendor entries`, icon: 'fa-file-invoice-dollar', tone: 'text-amber-700 bg-amber-50' },
+                { label: 'Stock Quantity', value: stockUnits.toLocaleString('en-IN'), detail: `${inventory.length} product styles`, icon: 'fa-boxes-stacked', tone: 'text-sundari-purple bg-sundari-purple/5' },
+                { label: 'Completed Orders', value: completedOrders.toLocaleString('en-IN'), detail: `Average order ${formatRupees(averageOrder)}`, icon: 'fa-receipt', tone: 'text-sky-700 bg-sky-50' },
+                { label: 'Profit / Loss (estimate)', value: profitLoss.value === null ? '—' : formatRupees(profitLoss.value), detail: profitDetail, icon: profitLoss.value !== null && profitLoss.value < 0 ? 'fa-arrow-trend-down' : 'fa-arrow-trend-up', tone: profitTone }
+            ];
+            document.getElementById('dashboard-metrics').innerHTML = metrics.map(metric => `
+                <div class="rounded-2xl border border-sundari-gold/20 p-3 sm:p-4 ${metric.tone}">
+                    <div class="flex items-start justify-between gap-2"><p class="text-[11px] sm:text-xs font-semibold opacity-80">${metric.label}</p><i class="fa-solid ${metric.icon} text-sm opacity-70"></i></div>
+                    <p class="mt-2 text-lg sm:text-2xl font-bold leading-tight break-words">${metric.value}</p>
+                    <p class="mt-1 text-[10px] opacity-70">${metric.detail}</p>
+                </div>
+            `).join('');
+            document.getElementById('dashboard-updated').textContent = `Updated ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`;
+
+            const categoryTotals = inventory.reduce((totals, product) => {
+                const category = product.category || 'Uncategorized';
+                totals[category] = (totals[category] || 0) + (Number(product.stock) || 0);
+                return totals;
+            }, {});
+            const categories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+            const maxCategoryStock = Math.max(1, ...categories.map(([, quantity]) => quantity));
+            document.getElementById('dashboard-stock-categories').innerHTML = categories.length ? categories.map(([category, quantity]) => `
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span class="font-semibold text-sundari-purple">${category}</span><span class="text-gray-500">${quantity.toLocaleString('en-IN')} units</span></div>
+                    <div class="h-2 rounded-full bg-sundari-cream overflow-hidden"><div class="h-full rounded-full bg-sundari-gold" style="width:${(quantity / maxCategoryStock * 100).toFixed(1)}%"></div></div>
+                </div>
+            `).join('') : '<p class="text-xs text-gray-400">No inventory recorded.</p>';
+
+            const recentPurchases = inventoryEntries.slice(0, 5);
+            document.getElementById('dashboard-purchases').innerHTML = recentPurchases.length ? recentPurchases.map(entry => `
+                <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <div class="min-w-0"><p class="text-xs font-semibold text-sundari-purple truncate">${entry.vendor || 'Vendor'}</p><p class="text-[10px] text-gray-400">${(entry.items || []).length} styles · ${formatDashboardDate(entry.date)}</p></div>
+                    <strong class="text-xs text-sundari-goldDark whitespace-nowrap">${formatRupees(Number(entry.grandTotal) || 0)}</strong>
+                </div>
+            `).join('') : '<p class="text-xs text-gray-400">No vendor purchases recorded yet.</p>';
+
+            const recentSales = orders.slice(0, 5);
+            document.getElementById('dashboard-sales').innerHTML = recentSales.length ? `
+                <table class="w-full text-left text-xs">
+                    <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer / Staff</th><th class="py-2 text-right">Revenue</th></tr></thead>
+                    <tbody>${recentSales.map(order => `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${order.id}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${order.customer || 'Walk-in Customer'}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(Number(order.total) || 0)}</td></tr>`).join('')}</tbody>
+                </table>
+            ` : '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
+        }
+
+        function formatDashboardDate(value) {
+            if (!value) return 'Date unavailable';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total-stock').innerText = inventory.length;
+            const totalQty = inventory.reduce((sum, item) => sum + item.stock, 0);
+            document.getElementById('stat-total-qty').innerText = totalQty;
+        }
+
+        // --- NAVIGATION & MODALS ---
+        function switchView(viewName) {
+            document.getElementById('view-inventory').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-purchase-orders').classList.add('hidden');
+            document.getElementById('view-orders').classList.add('hidden');
+            document.getElementById('view-preorders').classList.add('hidden');
+
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            document.getElementById('inventory-toolbar').classList.toggle('hidden', viewName !== 'inventory');
+            if (viewName === 'dashboard') renderDashboard();
+            if (viewName === 'purchase-orders') {
+                populatePurchaseVendorFilter();
+                renderPurchaseOrders();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('dropdown-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                setTimeout(() => {
+                    menu.classList.remove('opacity-0', 'scale-95');
+                }, 10);
+            } else {
+                menu.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                }, 200);
+            }
+        }
+
+        function resetApplication() {
+            if (!googleSheetEndpoint) {
+                showToast('Connect Google Sheets before resetting so the sheet data can be cleared too.');
+                openModal('settings-modal');
+                return;
+            }
+            const confirmed = window.confirm('Clear all SUNDARI inventory, vendor entries, sales orders, cart, and preorders from this browser and the connected Google Sheet? Sheet tabs and headers will remain. This cannot be undone.');
+            if (!confirmed) return;
+            fetch(googleSheetEndpoint, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'RESET_ALL_DATA' })
+            }).then(() => {
+                ['sundari_inventory', 'sundari_vendors', 'sundari_inventory_entries', 'sundari_cart', 'sundari_orders', 'sundari_preorders']
+                    .forEach(key => localStorage.removeItem(key));
+                window.location.reload();
+            }).catch(error => {
+                console.error('SUNDARI reset error:', error);
+                showToast('Reset could not reach Google Sheets. No local data was cleared.');
+            });
+        }
+
+        function toggleCartModal() {
+            const modal = document.getElementById('cart-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // --- GOOGLE SHEETS SYNC HANDLERS ---
+        function saveSheetSettings() {
+            const url = document.getElementById('google-sheet-url').value.trim();
+            if (!url) {
+                showToast('Enter the Google Sheets Web App URL first.');
+                return;
+            }
+            googleSheetEndpoint = url;
+            localStorage.setItem('sundari_sheet_url', url);
+            closeModal('settings-modal');
+            showToast('Sending current inventory to Google Sheets...');
+            syncInventoryWithGoogleSheets();
+        }
+
+        function pushOrderToGoogleSheet(orderData) {
+            if (!googleSheetEndpoint) return;
+            fetch(googleSheetEndpoint, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'LOG_ORDER', data: orderData })
+            }).then(() => {
+                console.log('Order synced to Google Sheets.');
+            }).catch(err => console.error('Sheet Sync Error:', err));
+        }
+
+        function buildGoogleSheetInventoryRows() {
+            return inventory.map(product => {
+                const sizeQuantities = product.sizeQuantities || {};
+                const sizesAvailable = (product.sizes || []).map(size => {
+                    const hasCount = Object.prototype.hasOwnProperty.call(sizeQuantities, size);
+                    return `${size}: ${hasCount ? Math.max(0, parseInt(sizeQuantities[size], 10) || 0) : `untracked (overall ${product.stock})`}`;
+                }).join(', ');
+                return { ...product, sizeQuantities, sizesAvailable };
+            });
+        }
+
+        function syncInventoryWithGoogleSheets(entry = null, quiet = false) {
+            if (!googleSheetEndpoint) {
+                if (!quiet) showToast('Add a Google Sheets Web App URL to enable inventory sync.');
+                return Promise.resolve(false);
+            }
+            const payload = {
+                action: 'SYNC_INVENTORY',
+                data: buildGoogleSheetInventoryRows(),
+                inventoryEntry: entry,
+                inventoryEntries
+            };
+            return fetch(googleSheetEndpoint, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                if (!quiet) showToast('Inventory sync request sent to Google Sheets.');
+                return true;
+            }).catch(error => {
+                console.error('Inventory sync error:', error);
+                if (!quiet) showToast('Inventory was saved locally, but Google Sheets sync failed.');
+                return false;
+            });
+        }
+
+        function syncWithGoogleSheets() {
+            if (!googleSheetEndpoint) {
+                alert("Please enter a valid Google Apps Script URL first.");
+                return;
+            }
+            showToast("Sending inventory, including size quantities, to Google Sheets...");
+            syncInventoryWithGoogleSheets().then(() => closeModal('settings-modal'));
+        }
+
+        function checkGoogleSheetsConnection() {
+            const endpoint = document.getElementById('google-sheet-url').value.trim() || googleSheetEndpoint;
+            if (!endpoint) {
+                showToast('Enter the Google Sheets Web App URL first.');
+                return;
+            }
+            const statusUrl = new URL(endpoint);
+            statusUrl.searchParams.set('check', '1');
+            window.open(statusUrl.toString(), '_blank', 'noopener');
+        }
+    </script>
+</body>
+</html>
