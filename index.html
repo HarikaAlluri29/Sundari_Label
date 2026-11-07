@@ -579,6 +579,9 @@
     <script>
         // --- INITIAL DATA SEEDING ---
         const initialProducts = [];
+        // Set this to the deployed Google Apps Script /exec URL before publishing the site.
+        // This shared setting lets every device load from the same Google Sheet.
+        const SHARED_GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyOpIqRzSk7QZCvPwC26H3yuTWsseYbd65GwHe8TnkPBT5spD5ejwQKYL5S6W7b0TOj/exec';
 
         // --- APP STATE ---
         let inventory = JSON.parse(localStorage.getItem('sundari_inventory')) || initialProducts;
@@ -587,10 +590,26 @@
         let cart = JSON.parse(localStorage.getItem('sundari_cart')) || [];
         let orders = JSON.parse(localStorage.getItem('sundari_orders')) || [];
         let preorders = JSON.parse(localStorage.getItem('sundari_preorders')) || [];
-        let googleSheetEndpoint = localStorage.getItem('sundari_sheet_url') || '';
+        let googleSheetEndpoint = SHARED_GOOGLE_SHEET_ENDPOINT || localStorage.getItem('sundari_sheet_url') || '';
 
         // --- INITIALIZATION ---
-        window.onload = function() {
+        window.onload = async function() {
+            if (googleSheetEndpoint) {
+                try {
+                    const sharedData = await loadSharedData();
+                    inventory = sharedData.inventory;
+                    inventoryEntries = sharedData.inventoryEntries;
+                    orders = sharedData.orders;
+                    vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                    localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+                    localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+                    localStorage.setItem('sundari_orders', JSON.stringify(orders));
+                    localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                } catch (error) {
+                    console.error('Google Sheets load error:', error);
+                    setTimeout(() => showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.'), 300);
+                }
+            }
             populateInventoryVendors();
             populatePurchaseVendorFilter();
             addInventoryStyle();
@@ -620,6 +639,36 @@
             if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
             const purchaseView = document.getElementById('view-purchase-orders');
             if (purchaseView && !purchaseView.classList.contains('hidden')) renderPurchaseOrders();
+        }
+
+        function loadSharedData() {
+            return new Promise((resolve, reject) => {
+                const callbackName = `sundariSheetLoad_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                const script = document.createElement('script');
+                const requestUrl = new URL(googleSheetEndpoint);
+                requestUrl.searchParams.set('action', 'GET_DATA');
+                requestUrl.searchParams.set('callback', callbackName);
+                const timeout = setTimeout(() => finish(new Error('Timed out while loading Google Sheets data.')), 12000);
+                const cleanup = () => {
+                    clearTimeout(timeout);
+                    delete window[callbackName];
+                    script.remove();
+                };
+                const finish = (error, payload) => {
+                    cleanup();
+                    if (error) return reject(error);
+                    if (!payload || !payload.ok || !payload.data) return reject(new Error(payload?.error || 'Google Sheets did not return app data.'));
+                    resolve({
+                        inventory: Array.isArray(payload.data.inventory) ? payload.data.inventory : [],
+                        inventoryEntries: Array.isArray(payload.data.inventoryEntries) ? payload.data.inventoryEntries : [],
+                        orders: Array.isArray(payload.data.orders) ? payload.data.orders : []
+                    });
+                };
+                window[callbackName] = payload => finish(null, payload);
+                script.onerror = () => finish(new Error('Could not reach the Google Apps Script web app.'));
+                script.src = requestUrl.toString();
+                document.head.appendChild(script);
+            });
         }
 
         function getGoogleDriveImageId(imageUrl) {
