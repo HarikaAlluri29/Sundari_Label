@@ -1120,7 +1120,7 @@
                         const availableSizes = product?.sizeQuantities
                             ? Object.entries(product.sizeQuantities).filter(([, quantity]) => Number(quantity) > 0)
                             : (Number(product?.stock) > 0 ? [['All sizes', Number(product.stock)]] : []);
-                        const returnControls = availableSizes.length ? `<div class="mt-2 flex flex-wrap items-center gap-2"><select id="return-size-${style.id}" onchange="updateReturnQuantityLimit('${style.id}')" class="p-1.5 border border-sundari-gold/40 rounded-md text-xs">${availableSizes.map(([size, quantity]) => `<option value="${escapeHtml(size)}" data-available="${Number(quantity)}">${escapeHtml(size)} · ${Number(quantity)} available</option>`).join('')}</select><input id="return-qty-${style.id}" type="number" min="1" max="${Number(availableSizes[0][1])}" value="1" class="w-16 p-1.5 border border-sundari-gold/40 rounded-md text-xs" oninput="updateReturnQuantityLimit('${style.id}')"><button onclick="returnToVendor('${entry.id}','${style.id}')" class="px-2.5 py-1.5 rounded-md bg-amber-100 text-amber-900 text-xs font-bold hover:bg-amber-200">Return to Vendor</button></div>` : '<p class="mt-2 text-[10px] text-gray-400">No stock is currently available to return.</p>';
+                        const returnControls = availableSizes.length ? `<div class="mt-2 flex flex-wrap items-end gap-2"><select id="return-size-${style.id}" onchange="updateReturnQuantityLimit('${style.id}')" class="p-1.5 border border-sundari-gold/40 rounded-md text-xs">${availableSizes.map(([size, quantity]) => `<option value="${escapeHtml(size)}" data-available="${Number(quantity)}">${escapeHtml(size)} · ${Number(quantity)} available</option>`).join('')}</select><input id="return-qty-${style.id}" type="number" min="1" max="${Number(availableSizes[0][1])}" value="1" aria-label="Return quantity" class="w-14 p-1.5 border border-sundari-gold/40 rounded-md text-xs" oninput="updateReturnQuantityLimit('${style.id}')"><label class="text-[9px] text-gray-500">Return shipping ₹<input id="return-shipping-${style.id}" type="number" min="0" step="0.01" value="0" aria-label="Return shipping charges" class="block w-20 p-1.5 border border-sundari-gold/40 rounded-md text-xs"></label><button onclick="returnToVendor('${entry.id}','${style.id}')" class="px-2.5 py-1.5 rounded-md bg-amber-100 text-amber-900 text-xs font-bold hover:bg-amber-200">Return to Vendor</button></div>` : '<p class="mt-2 text-[10px] text-gray-400">No stock is currently available to return.</p>';
                         return `<div class="py-3 flex items-start gap-3">
                             <img src="${getEmbeddableImageUrl(style.image || '')}" alt="${style.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(style.image || '')}" data-placeholder-url="assets/default.jpeg" class="w-16 h-20 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
                             <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${style.name}</p><p class="text-xs text-gray-600">${style.sizeQuantities ? `Size quantities: ${sizes || 'not recorded'}` : `Sizes: ${sizes || 'not recorded'} · size quantities not recorded`}</p><p class="text-[11px] text-gray-500">${Number(style.stock) || 0} units · Unit cost ${formatRupees(Number(style.unitCost) || 0)}</p>${returnControls}</div>
@@ -1135,7 +1135,7 @@
                     <div class="flex justify-between gap-6 border-t border-sundari-gold/30 pt-2 font-bold text-sundari-purple"><span>Total</span><span>${formatRupees(Number(entry.grandTotal) || itemSubtotal + chargeTotal)}</span></div>
                     <div class="flex justify-between gap-6 border-t border-gray-100 pt-2 text-amber-800"><span>Vendor credit · ${entry.vendor || 'vendor'}</span><strong>${formatRupees(vendorCredit)}</strong></div>
                 </div>
-                ${(entry.returns || []).length ? `<div class="rounded-xl bg-amber-50 p-3"><h4 class="font-bold text-sm text-amber-900 mb-2">Returned to vendor</h4>${entry.returns.map(record => `<div class="flex justify-between gap-3 text-xs py-1"><span>${record.name} · ${record.size} × ${record.quantity}</span><strong>${formatRupees(Number(record.amount) || 0)}</strong></div>`).join('')}</div>` : ''}
+                ${(entry.returns || []).length ? `<div class="rounded-xl bg-amber-50 p-3"><h4 class="font-bold text-sm text-amber-900 mb-2">Returned to vendor</h4>${entry.returns.map(record => { const itemValue = record.productCost !== undefined ? Number(record.productCost) || 0 : (Number(record.amount) || 0) + (Number(record.shipping) || 0); return `<div class="flex justify-between gap-3 text-xs py-1"><span>${record.name} · ${record.size} × ${record.quantity}<span class="block text-[10px] text-gray-500">Item value ${formatRupees(itemValue)} − shipping ${formatRupees(Number(record.shipping) || 0)}</span></span><strong>${formatRupees(Number(record.amount) || 0)} credit</strong></div>`; }).join('')}</div>` : ''}
             `;
             openModal('purchase-order-detail-modal');
         }
@@ -1154,6 +1154,7 @@
             const product = inventory.find(item => item.id === productId);
             const select = document.getElementById(`return-size-${productId}`);
             const quantityInput = document.getElementById(`return-qty-${productId}`);
+            const shippingInput = document.getElementById(`return-shipping-${productId}`);
             const quantity = Math.floor(Number(quantityInput?.value) || 0);
             if (!entry || !product || !select || quantity < 1) return showToast('Choose a valid return quantity.');
             const size = select.value;
@@ -1163,8 +1164,10 @@
             product.stock = Math.max(0, (Number(product.stock) || 0) - quantity);
             if (tracked) product.sizeQuantities[size] = Math.max(0, available - quantity);
             const item = (entry.items || []).find(candidate => candidate.id === productId) || {};
-            const amount = (Number(item.unitCost ?? product.unitCost) || 0) * quantity;
-            const record = { date: new Date().toISOString(), vendor: entry.vendor, productId, name: item.name || product.name, size, quantity, amount };
+            const productCost = (Number(item.unitCost ?? product.unitCost) || 0) * quantity;
+            const shipping = Math.max(0, Number(shippingInput?.value) || 0);
+            const amount = productCost - shipping;
+            const record = { date: new Date().toISOString(), vendor: entry.vendor, productId, name: item.name || product.name, size, quantity, productCost, shipping, amount };
             entry.returns = [...(entry.returns || []), record];
             entry.vendorCredits = { ...(entry.vendorCredits || {}) };
             entry.vendorCredits[entry.vendor] = (Number(entry.vendorCredits[entry.vendor]) || 0) + amount;
@@ -1173,7 +1176,7 @@
             filterInventory();
             openPurchaseOrderDetails(entryId);
             if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
-            showToast(`${quantity} unit(s) returned. ${formatRupees(amount)} added to ${entry.vendor}'s vendor credit.`);
+            showToast(`${quantity} unit(s) returned. Vendor credit adjusted by ${formatRupees(amount)} after shipping.`);
         }
 
         function startEditPurchaseOrder(entryId) {
@@ -1623,7 +1626,7 @@
                 const billTotal = inventoryEntries.filter(entry => entry.vendor === vendor).reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
                 const credit = getVendorCredit(vendor);
                 return `<button type="button" onclick="openVendorLedger(decodeURIComponent('${encodeURIComponent(vendor).replace(/'/g, '%27')}'))" class="w-full flex items-center justify-between gap-3 p-2.5 text-left rounded-xl hover:bg-sundari-cream/70 transition border-b border-gray-100 last:border-0">
-                    <span class="min-w-0"><span class="block text-xs font-bold text-sundari-purple truncate">${escapeHtml(vendor)}</span><span class="block text-[10px] text-gray-400">${inventoryEntries.filter(entry => entry.vendor === vendor).length} purchase orders${credit > 0 ? ` · Credit balance ${formatRupees(credit)}` : ''}</span></span>
+                    <span class="min-w-0"><span class="block text-xs font-bold text-sundari-purple truncate">${escapeHtml(vendor)}</span><span class="block text-[10px] text-gray-400">${inventoryEntries.filter(entry => entry.vendor === vendor).length} purchase orders${Math.abs(credit) > 0.0001 ? ` · Credit balance ${formatRupees(credit)}` : ''}</span></span>
                     <strong class="text-xs text-sundari-goldDark whitespace-nowrap">${formatRupees(billTotal)}</strong>
                 </button>`;
             }).join('') : '<p class="text-xs text-gray-400">No vendors recorded yet.</p>';
