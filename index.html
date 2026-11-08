@@ -215,10 +215,10 @@
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
-                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Recent Vendor Purchases</h3>
-                    <div id="dashboard-purchases" class="space-y-2"></div>
+                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Vendor List</h3>
+                    <div id="dashboard-vendors" class="space-y-1 max-h-80 overflow-y-auto pr-1"></div>
                 </div>
-                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow lg:col-span-2">
+                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
                     <div class="flex items-center justify-between gap-3 mb-3"><h3 class="font-brand text-lg font-bold text-sundari-purple">Sale · Recent Records</h3><button onclick="openSalesRevenueModal()" class="text-xs font-bold text-sundari-purple hover:underline whitespace-nowrap">View All</button></div>
                     <div id="dashboard-sales" class="overflow-x-auto"></div>
                 </div>
@@ -452,12 +452,22 @@
         </div>
     </div>
 
+    <div id="vendor-ledger-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Vendor ledger</p><h3 id="vendor-ledger-title" class="font-brand font-bold text-sundari-gold"></h3></div>
+                <button onclick="closeModal('vendor-ledger-modal')" aria-label="Close vendor ledger" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="vendor-ledger-content" class="p-4 sm:p-5"></div>
+        </div>
+    </div>
+
     <!-- MODAL 2: ADD NEW INVENTORY -->
     <div id="add-inventory-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4">
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] custom-shadow overflow-y-auto border border-sundari-gold/40 my-1 sm:my-2">
-            <div class="sticky top-0 z-10 bg-sundari-purple p-4 text-white flex justify-between items-center border-b border-sundari-gold/30">
+            <div class="sticky top-0 z-10 bg-sundari-purple p-3 text-white flex justify-between items-center border-b border-sundari-gold/30">
                 <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-plus-circle mr-2"></i>Receive Vendor Stock</h3>
-                <button onclick="closeModal('add-inventory-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex items-center gap-3"><button type="button" onclick="addInventoryStyle()" class="px-3 py-2 bg-sundari-gold text-sundari-purple font-bold rounded-lg text-xs whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>Add Style</button><button onclick="closeModal('add-inventory-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
             </div>
             
             <form id="add-garment-form" onsubmit="handleAddInventory(event)" class="p-3 sm:p-4 space-y-3 text-xs">
@@ -480,30 +490,29 @@
                         <h4 class="font-bold text-sundari-purple text-sm">Items in this vendor entry</h4>
                         <p class="text-[11px] text-gray-500">Add each style with its own image, costs, and size quantities.</p>
                     </div>
-                    <button type="button" onclick="addInventoryStyle()" class="px-3 py-2 bg-sundari-gold/15 text-sundari-purple font-bold rounded-xl hover:bg-sundari-gold/25"><i class="fa-solid fa-plus mr-1"></i>Add Style</button>
                 </div>
                 <div id="inventory-style-list" class="space-y-3"></div>
 
                 <template id="inventory-style-template">
-                    <section class="inventory-style border border-sundari-gold/30 rounded-xl p-2.5 space-y-2 bg-sundari-cream/30">
+                    <section class="inventory-style border border-sundari-gold/30 rounded-xl p-2 space-y-1.5 bg-sundari-cream/30">
                         <div class="flex items-center justify-between">
                             <h5 class="style-heading font-bold text-sundari-purple">Style 1</h5>
                             <button type="button" onclick="removeInventoryStyle(this)" class="remove-style-btn text-rose-600 hover:text-rose-800 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i>Remove</button>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div><label class="block font-semibold text-sundari-purple mb-1">Item Name (optional)</label><input type="text" data-field="name" placeholder="e.g. Printed cotton kurti" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
-                            <div><label class="block font-semibold text-sundari-purple mb-1">Image URL (optional)</label><input type="url" data-field="image" placeholder="Paste a direct or Google Drive image link" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"><p class="mt-1 text-[10px] text-gray-400">For Drive images, set General access to Anyone with the link · Viewer.</p></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Item Name (optional)</label><input type="text" data-field="name" placeholder="e.g. Printed cotton kurti" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
+                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Image URL (optional)</label><input type="url" data-field="image" placeholder="Paste a direct or Google Drive image link" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"><p class="mt-0.5 text-[9px] text-gray-400">For Drive images, set access to Anyone with the link · Viewer.</p></div>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div><label class="block font-semibold text-sundari-purple mb-1">Unit Cost (₹) *</label><input type="number" data-field="unitCost" required min="0.01" step="0.01" placeholder="450" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
-                            <div><label class="block font-semibold text-sundari-purple mb-1">Selling Price (₹) *</label><input type="number" data-field="price" required min="0.01" step="0.01" placeholder="799" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-xl text-sm"></div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Unit Cost (₹) *</label><input type="number" data-field="unitCost" required min="0.01" step="0.01" placeholder="450" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
+                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Selling Price (₹) *</label><input type="number" data-field="price" required min="0.01" step="0.01" placeholder="799" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <label class="block font-semibold text-sundari-purple">Size quantities *</label>
                                 <button type="button" onclick="addInventorySize(this)" class="text-sundari-purple font-semibold hover:underline">+ Add size</button>
                             </div>
-                            <div class="size-quantity-list grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                            <div class="size-quantity-list grid grid-cols-4 gap-1"></div>
                         </div>
                         <p class="style-total text-[11px] font-semibold text-gray-600">Units: 0 · Item cost: ₹0</p>
                     </section>
@@ -1286,10 +1295,10 @@
         }
 
         function inventorySizeRow(size = '', quantity = 0) {
-            return `<div class="size-quantity-row flex items-center gap-1.5">
-                <input type="text" value="${size}" placeholder="Size" aria-label="Size" required class="size-name min-w-0 w-1/2 p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
-                <input type="number" value="${quantity}" min="0" step="1" placeholder="Qty" aria-label="Quantity" required class="size-qty min-w-0 w-1/2 p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
-                <button type="button" onclick="removeInventorySize(this)" aria-label="Remove size" class="text-gray-400 hover:text-red-600 px-1"><i class="fa-solid fa-xmark"></i></button>
+            return `<div class="size-quantity-row grid grid-cols-[minmax(0,1fr)_2rem_0.75rem] items-center gap-0.5 min-w-0">
+                <input type="text" value="${size}" placeholder="Size" aria-label="Size" required class="size-name min-w-0 w-full px-1 py-1 text-center bg-white border border-sundari-gold/30 rounded-md text-[10px]">
+                <input type="number" value="${quantity}" min="0" step="1" placeholder="Qty" aria-label="Quantity" required class="size-qty min-w-0 w-full px-1 py-1 text-center bg-white border border-sundari-gold/30 rounded-md text-[10px]">
+                <button type="button" onclick="removeInventorySize(this)" aria-label="Remove size" class="w-3 text-gray-400 hover:text-red-600 text-[10px]"><i class="fa-solid fa-xmark"></i></button>
             </div>`;
         }
 
@@ -1608,20 +1617,26 @@
             `).join('');
             document.getElementById('dashboard-updated').textContent = `Updated ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`;
 
-            const recentPurchases = inventoryEntries.slice(0, 5);
-            document.getElementById('dashboard-purchases').innerHTML = recentPurchases.length ? recentPurchases.map(entry => `
-                <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
-                    <div class="min-w-0"><p class="text-xs font-semibold text-sundari-purple truncate">${entry.vendor || 'Vendor'}</p><p class="text-[10px] text-gray-400">${(entry.items || []).length} styles · ${formatDashboardDate(entry.date)}</p></div>
-                    <strong class="text-xs text-sundari-goldDark whitespace-nowrap">${formatRupees(Number(entry.grandTotal) || 0)}</strong>
-                </div>
-            `).join('') : '<p class="text-xs text-gray-400">No vendor purchases recorded yet.</p>';
+            const vendorNames = [...new Set([...vendors, ...inventoryEntries.map(entry => entry.vendor).filter(Boolean)])]
+                .sort((a, b) => a.localeCompare(b));
+            document.getElementById('dashboard-vendors').innerHTML = vendorNames.length ? vendorNames.map(vendor => {
+                const billTotal = inventoryEntries.filter(entry => entry.vendor === vendor).reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
+                const credit = getVendorCredit(vendor);
+                return `<button type="button" onclick="openVendorLedger(decodeURIComponent('${encodeURIComponent(vendor).replace(/'/g, '%27')}'))" class="w-full flex items-center justify-between gap-3 p-2.5 text-left rounded-xl hover:bg-sundari-cream/70 transition border-b border-gray-100 last:border-0">
+                    <span class="min-w-0"><span class="block text-xs font-bold text-sundari-purple truncate">${escapeHtml(vendor)}</span><span class="block text-[10px] text-gray-400">${inventoryEntries.filter(entry => entry.vendor === vendor).length} purchase orders${credit > 0 ? ` · Credit balance ${formatRupees(credit)}` : ''}</span></span>
+                    <strong class="text-xs text-sundari-goldDark whitespace-nowrap">${formatRupees(billTotal)}</strong>
+                </button>`;
+            }).join('') : '<p class="text-xs text-gray-400">No vendors recorded yet.</p>';
 
             const recentSales = orders.slice(0, 5);
-            document.getElementById('dashboard-sales').innerHTML = renderSalesRevenueTable(recentSales);
+            document.getElementById('dashboard-sales').innerHTML = renderSalesRevenueTable(recentSales, false);
         }
 
-        function renderSalesRevenueTable(saleOrders) {
+        function renderSalesRevenueTable(saleOrders, includeCostDetails = true) {
             if (!saleOrders.length) return '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
+            if (!includeCostDetails) return `<table class="w-full text-left text-xs">
+                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order ID</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 text-right">Sale value</th></tr></thead>
+                <tbody>${saleOrders.map(order => `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(getOrderRevenue(order))}</td></tr>`).join('')}</tbody></table>`;
             return `<table class="w-full min-w-[660px] text-left text-xs">
                 <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3 text-right">Sale value</th><th class="py-2 pr-3 text-right">Purchase value</th><th class="py-2 text-right">Revenue</th></tr></thead>
                 <tbody>${saleOrders.map(order => {
@@ -1641,6 +1656,32 @@
                 <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Revenue after purchase cost</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(knownProfit)}</strong></div>
             </div><div class="overflow-x-auto">${renderSalesRevenueTable(orders)}</div><p class="mt-2 text-[10px] text-gray-400">Orders without recorded item costs show — for purchase value and revenue.</p>`;
             openModal('sales-revenue-modal');
+        }
+
+        function openVendorLedger(vendor) {
+            const vendorEntries = inventoryEntries.filter(entry => entry.vendor === vendor);
+            const billTotal = vendorEntries.reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
+            const creditTotal = getVendorCredit(vendor);
+            const events = [];
+            vendorEntries.forEach(entry => {
+                events.push({ date: entry.date, type: 'Purchase bill', reference: entry.id, bill: Number(entry.grandTotal) || 0, credit: 0 });
+                (entry.returns || []).filter(record => (record.vendor || entry.vendorCreditVendor || entry.vendor) === vendor).forEach(record => {
+                    events.push({ date: record.date || entry.date, type: 'Return credit', reference: `${entry.id} · ${record.name || 'Item'} (${record.size || 'size unavailable'}) × ${Number(record.quantity) || 0}`, bill: 0, credit: Number(record.amount) || 0 });
+                });
+            });
+            events.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            let runningBalance = 0;
+            const rows = events.map(event => {
+                runningBalance += event.bill - event.credit;
+                return `<tr class="border-b border-gray-100"><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(event.date)}</td><td class="py-2 pr-3">${escapeHtml(event.type)}</td><td class="py-2 pr-3">${escapeHtml(event.reference)}</td><td class="py-2 pr-3 text-right">${event.bill ? formatRupees(event.bill) : '—'}</td><td class="py-2 pr-3 text-right text-amber-800">${event.credit ? formatRupees(event.credit) : '—'}</td><td class="py-2 text-right font-semibold">${formatRupees(runningBalance)}</td></tr>`;
+            }).join('');
+            document.getElementById('vendor-ledger-title').textContent = vendor;
+            document.getElementById('vendor-ledger-content').innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-xs">
+                <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Total bills</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(billTotal)}</strong></div>
+                <div class="rounded-xl bg-amber-50 p-3"><span class="text-amber-800">Credit balance</span><strong class="block text-amber-900 text-base mt-1">${formatRupees(creditTotal)}</strong></div>
+                <div class="rounded-xl bg-sundari-purple/5 p-3"><span class="text-gray-500">Balance after credit</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(billTotal - creditTotal)}</strong></div>
+            </div><div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-xs"><thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Entry</th><th class="py-2 pr-3">Reference</th><th class="py-2 pr-3 text-right">Bill</th><th class="py-2 pr-3 text-right">Credit</th><th class="py-2 text-right">Balance</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="py-4 text-center text-gray-400">No ledger entries recorded for this vendor.</td></tr>'}</tbody></table></div>`;
+            openModal('vendor-ledger-modal');
         }
 
         function formatDashboardDate(value) {
