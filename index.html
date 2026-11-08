@@ -210,20 +210,16 @@
                     </div>
                     <span id="dashboard-updated" class="text-[11px] text-gray-400"></span>
                 </div>
-                <div id="dashboard-metrics" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3"></div>
-                <p class="mt-3 text-[10px] text-gray-400">Sales revenue uses logged orders. Profit/loss estimates gross profit from recorded item costs; it excludes other expenses and vendor charges not assigned to items. Purchase totals use vendor entries recorded in this app.</p>
+                <div id="dashboard-metrics" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3"></div>
+                <p class="mt-3 text-[10px] text-gray-400">Profit / Loss is calculated as total recorded purchases minus total recorded sales. Order revenue excludes shipping and discounts and is compared with the purchase value of the items sold.</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
-                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Stock by Category</h3>
-                    <div id="dashboard-stock-categories" class="space-y-3"></div>
-                </div>
                 <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
                     <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Recent Vendor Purchases</h3>
                     <div id="dashboard-purchases" class="space-y-2"></div>
                 </div>
                 <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow lg:col-span-2">
-                    <h3 class="font-brand text-lg font-bold text-sundari-purple mb-3">Recent Sales</h3>
+                    <div class="flex items-center justify-between gap-3 mb-3"><h3 class="font-brand text-lg font-bold text-sundari-purple">Sale · Recent Records</h3><button onclick="openSalesRevenueModal()" class="text-xs font-bold text-sundari-purple hover:underline whitespace-nowrap">View All</button></div>
                     <div id="dashboard-sales" class="overflow-x-auto"></div>
                 </div>
             </div>
@@ -357,6 +353,10 @@
                             <label class="block font-semibold text-sundari-purple mb-1">Address</label>
                             <textarea id="order-customer-address" rows="2" autocomplete="street-address" placeholder="Optional delivery address" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple"></textarea>
                         </div>
+                        <div>
+                            <label class="block font-semibold text-sundari-purple mb-1">Discount Amount (₹)</label>
+                            <input type="number" id="order-discount-amount" min="0" step="0.01" value="0" oninput="updateCartUI()" class="w-full p-2 text-sm bg-white border border-sundari-gold/40 rounded-lg focus:outline-none focus:border-sundari-purple">
+                        </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block font-semibold text-sundari-purple mb-1">Shipping Charges (₹)</label>
@@ -376,6 +376,7 @@
                     <div class="border-t border-sundari-gold/20 pt-2 space-y-1 text-xs">
                         <div class="flex justify-between text-gray-600"><span>Items subtotal</span><span id="cart-items-subtotal">₹0</span></div>
                         <div class="flex justify-between text-gray-600"><span>Shipping</span><span id="cart-shipping-total">₹0</span></div>
+                        <div class="flex justify-between text-gray-600"><span>Discount</span><span id="cart-discount-total">−₹0</span></div>
                         <div class="flex items-center justify-between text-base font-bold text-sundari-purple"><span>Total Payable:</span><span id="cart-total-price" class="text-lg text-sundari-goldDark">₹0</span></div>
                     </div>
 
@@ -419,6 +420,35 @@
                 <button onclick="closeModal('purchase-order-detail-modal')" aria-label="Close purchase order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div id="purchase-order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
+        </div>
+    </div>
+
+    <div id="purchase-order-edit-modal" class="fixed inset-0 z-[70] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+                <h3 class="font-brand font-bold text-sundari-gold">Edit Purchase Order</h3>
+                <button onclick="closeModal('purchase-order-edit-modal')" aria-label="Close edit purchase order" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form id="purchase-order-edit-form" onsubmit="savePurchaseOrderEdit(event)" class="p-4 space-y-3">
+                <input id="edit-purchase-id" type="hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label class="text-xs font-semibold text-sundari-purple">Vendor<input id="edit-purchase-vendor" required class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg text-sm"></label>
+                    <label class="text-xs font-semibold text-sundari-purple">Purchase date<input id="edit-purchase-date" type="date" required class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg text-sm"></label>
+                </div>
+                <div><h4 class="text-sm font-bold text-sundari-purple mb-2">Style details</h4><div id="edit-purchase-styles" class="space-y-2"></div></div>
+                <div><div class="flex justify-between items-center mb-2"><h4 class="text-sm font-bold text-sundari-purple">Additional charges</h4><button type="button" onclick="addEditPurchaseCharge()" class="text-xs text-sundari-purple font-bold">+ Add charge</button></div><div id="edit-purchase-charges" class="space-y-2"></div></div>
+                <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('purchase-order-edit-modal')" class="px-4 py-2 border rounded-lg text-sm">Cancel</button><button type="submit" class="px-4 py-2 bg-sundari-purple text-sundari-gold rounded-lg font-bold text-sm">Save Changes</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="sales-revenue-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">All sale orders</p><h3 class="font-brand font-bold text-sundari-gold">Sale Revenue Totals</h3></div>
+                <button onclick="closeModal('sales-revenue-modal')" aria-label="Close sale revenue totals" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div id="sales-revenue-list" class="p-4 sm:p-5"></div>
         </div>
     </div>
 
@@ -685,7 +715,7 @@
 
         function getEmbeddableImageUrl(imageUrl) {
             const fileId = getGoogleDriveImageId(imageUrl);
-            return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200` : (imageUrl || '');
+            return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200` : (imageUrl || 'assets/default.jpeg');
         }
 
         function getDriveImageFallbackUrl(imageUrl) {
@@ -700,7 +730,7 @@
                 return;
             }
             image.onerror = null;
-            image.src = image.dataset.placeholderUrl || 'https://placehold.co/120x140/3A1032/D4AF37?text=Item';
+            image.src = 'assets/default.jpeg';
         }
 
         // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
@@ -858,11 +888,13 @@
             const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
             const itemsSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const shippingCharge = Math.max(0, parseFloat(document.getElementById('order-shipping-charge').value) || 0);
-            const totalPrice = itemsSubtotal + shippingCharge;
+            const discountAmount = Math.min(itemsSubtotal, Math.max(0, parseFloat(document.getElementById('order-discount-amount').value) || 0));
+            const totalPrice = itemsSubtotal + shippingCharge - discountAmount;
 
             badge.innerText = totalItems;
             document.getElementById('cart-items-subtotal').innerText = formatRupees(itemsSubtotal);
             document.getElementById('cart-shipping-total').innerText = formatRupees(shippingCharge);
+            document.getElementById('cart-discount-total').innerText = `−${formatRupees(discountAmount)}`;
             totalPriceEl.innerText = formatRupees(totalPrice);
 
             if (cart.length === 0) {
@@ -915,6 +947,7 @@
             const paymentType = document.getElementById('order-payment-type').value;
             const shippingCharge = Math.max(0, parseFloat(document.getElementById('order-shipping-charge').value) || 0);
             const itemsSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const discountAmount = Math.min(itemsSubtotal, Math.max(0, parseFloat(document.getElementById('order-discount-amount').value) || 0));
 
             // 1. Decrement Stock from Inventory
             cart.forEach(cartItem => {
@@ -952,8 +985,9 @@
                 }),
                 itemsSubtotal,
                 shipping: shippingCharge,
+                discount: discountAmount,
                 paymentType,
-                total: itemsSubtotal + shippingCharge,
+                total: itemsSubtotal + shippingCharge - discountAmount,
                 status: 'Completed'
             };
 
@@ -970,6 +1004,7 @@
             document.getElementById('order-customer-number').value = '';
             document.getElementById('order-customer-address').value = '';
             document.getElementById('order-shipping-charge').value = '0';
+            document.getElementById('order-discount-amount').value = '0';
             saveState();
             updateCartUI();
             filterInventory();
@@ -1035,11 +1070,21 @@
                     ...product,
                     ...item,
                     name: item.name || product?.name || 'Unnamed style',
-                    image: item.image || product?.image || '',
+                    image: item.image || product?.image || 'assets/default.jpeg',
                     sizes: item.sizes || product?.sizes || [],
                     sizeQuantities: item.sizeQuantities || null
                 };
             });
+        }
+
+        function getVendorCredit(vendor) {
+            return inventoryEntries.reduce((sum, entry) => {
+                if (entry.vendorCredits && Object.keys(entry.vendorCredits).length) {
+                    return sum + (Number(entry.vendorCredits[vendor]) || 0);
+                }
+                const legacyVendor = entry.vendorCreditVendor || entry.vendor;
+                return sum + (legacyVendor === vendor ? Number(entry.vendorCredit) || 0 : 0);
+            }, 0);
         }
 
         function openPurchaseOrderDetails(entryId) {
@@ -1049,8 +1094,10 @@
             const itemSubtotal = Number(entry.itemSubtotal) || styles.reduce((sum, style) => sum + (Number(style.unitCost) || 0) * (Number(style.stock) || 0), 0);
             const charges = (entry.charges || []).filter(charge => Number(charge.amount) > 0);
             const chargeTotal = Number(entry.chargeTotal) || charges.reduce((sum, charge) => sum + Number(charge.amount), 0);
+            const vendorCredit = getVendorCredit(entry.vendor);
             document.getElementById('purchase-order-detail-title').textContent = entry.id || 'Purchase details';
             document.getElementById('purchase-order-detail-content').innerHTML = `
+                <div class="flex justify-end"><button onclick="startEditPurchaseOrder('${entry.id}')" class="px-3 py-2 rounded-lg border border-sundari-gold/50 text-xs text-sundari-purple font-bold hover:bg-sundari-cream"><i class="fa-solid fa-pen mr-1"></i>Edit Order Details</button></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Vendor</p><p>${entry.vendor || '—'}</p></div>
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Purchase date</p><p>${formatDashboardDate(entry.date)}</p></div>
@@ -1060,9 +1107,14 @@
                         const sizes = style.sizeQuantities
                             ? Object.entries(style.sizeQuantities).map(([size, quantity]) => `${size}: ${quantity}`).join(' · ')
                             : (style.sizes || []).join(', ');
-                        return `<div class="py-3 flex items-center gap-3">
-                            <img src="${getEmbeddableImageUrl(style.image || '')}" alt="${style.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(style.image || '')}" data-placeholder-url="https://placehold.co/120x140/3A1032/D4AF37?text=Item" class="w-16 h-20 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
-                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${style.name}</p><p class="text-xs text-gray-600">${style.sizeQuantities ? `Size quantities: ${sizes || 'not recorded'}` : `Sizes: ${sizes || 'not recorded'} · size quantities not recorded`}</p><p class="text-[11px] text-gray-500">${Number(style.stock) || 0} units · Unit cost ${formatRupees(Number(style.unitCost) || 0)}</p></div>
+                        const product = inventory.find(candidate => candidate.id === style.id);
+                        const availableSizes = product?.sizeQuantities
+                            ? Object.entries(product.sizeQuantities).filter(([, quantity]) => Number(quantity) > 0)
+                            : (Number(product?.stock) > 0 ? [['All sizes', Number(product.stock)]] : []);
+                        const returnControls = availableSizes.length ? `<div class="mt-2 flex flex-wrap items-center gap-2"><select id="return-size-${style.id}" onchange="updateReturnQuantityLimit('${style.id}')" class="p-1.5 border border-sundari-gold/40 rounded-md text-xs">${availableSizes.map(([size, quantity]) => `<option value="${escapeHtml(size)}" data-available="${Number(quantity)}">${escapeHtml(size)} · ${Number(quantity)} available</option>`).join('')}</select><input id="return-qty-${style.id}" type="number" min="1" max="${Number(availableSizes[0][1])}" value="1" class="w-16 p-1.5 border border-sundari-gold/40 rounded-md text-xs" oninput="updateReturnQuantityLimit('${style.id}')"><button onclick="returnToVendor('${entry.id}','${style.id}')" class="px-2.5 py-1.5 rounded-md bg-amber-100 text-amber-900 text-xs font-bold hover:bg-amber-200">Return to Vendor</button></div>` : '<p class="mt-2 text-[10px] text-gray-400">No stock is currently available to return.</p>';
+                        return `<div class="py-3 flex items-start gap-3">
+                            <img src="${getEmbeddableImageUrl(style.image || '')}" alt="${style.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(style.image || '')}" data-placeholder-url="assets/default.jpeg" class="w-16 h-20 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
+                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${style.name}</p><p class="text-xs text-gray-600">${style.sizeQuantities ? `Size quantities: ${sizes || 'not recorded'}` : `Sizes: ${sizes || 'not recorded'} · size quantities not recorded`}</p><p class="text-[11px] text-gray-500">${Number(style.stock) || 0} units · Unit cost ${formatRupees(Number(style.unitCost) || 0)}</p>${returnControls}</div>
                             <strong class="text-sm text-sundari-goldDark">${formatRupees((Number(style.unitCost) || 0) * (Number(style.stock) || 0))}</strong>
                         </div>`;
                     }).join('') : '<p class="py-4 text-xs text-gray-400">No style details were saved for this purchase.</p>'}</div>
@@ -1072,9 +1124,146 @@
                     ${charges.map(charge => `<div class="flex justify-between gap-6 text-gray-600"><span>${charge.description || 'Additional charge'}</span><span>${formatRupees(Number(charge.amount) || 0)}</span></div>`).join('')}
                     <div class="flex justify-between gap-6 text-gray-600"><span>Additional charges</span><span>${formatRupees(chargeTotal)}</span></div>
                     <div class="flex justify-between gap-6 border-t border-sundari-gold/30 pt-2 font-bold text-sundari-purple"><span>Total</span><span>${formatRupees(Number(entry.grandTotal) || itemSubtotal + chargeTotal)}</span></div>
+                    <div class="flex justify-between gap-6 border-t border-gray-100 pt-2 text-amber-800"><span>Vendor credit · ${entry.vendor || 'vendor'}</span><strong>${formatRupees(vendorCredit)}</strong></div>
                 </div>
+                ${(entry.returns || []).length ? `<div class="rounded-xl bg-amber-50 p-3"><h4 class="font-bold text-sm text-amber-900 mb-2">Returned to vendor</h4>${entry.returns.map(record => `<div class="flex justify-between gap-3 text-xs py-1"><span>${record.name} · ${record.size} × ${record.quantity}</span><strong>${formatRupees(Number(record.amount) || 0)}</strong></div>`).join('')}</div>` : ''}
             `;
             openModal('purchase-order-detail-modal');
+        }
+
+        function updateReturnQuantityLimit(styleId) {
+            const select = document.getElementById(`return-size-${styleId}`);
+            const quantity = document.getElementById(`return-qty-${styleId}`);
+            if (!select || !quantity) return;
+            const available = Number(select.selectedOptions[0]?.dataset.available) || 1;
+            quantity.max = available;
+            if (Number(quantity.value) > available) quantity.value = String(available);
+        }
+
+        function returnToVendor(entryId, productId) {
+            const entry = inventoryEntries.find(item => item.id === entryId);
+            const product = inventory.find(item => item.id === productId);
+            const select = document.getElementById(`return-size-${productId}`);
+            const quantityInput = document.getElementById(`return-qty-${productId}`);
+            const quantity = Math.floor(Number(quantityInput?.value) || 0);
+            if (!entry || !product || !select || quantity < 1) return showToast('Choose a valid return quantity.');
+            const size = select.value;
+            const tracked = product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, size);
+            const available = tracked ? Number(product.sizeQuantities[size]) || 0 : Number(product.stock) || 0;
+            if (quantity > available) return showToast(`Only ${available} unit(s) are available to return.`);
+            product.stock = Math.max(0, (Number(product.stock) || 0) - quantity);
+            if (tracked) product.sizeQuantities[size] = Math.max(0, available - quantity);
+            const item = (entry.items || []).find(candidate => candidate.id === productId) || {};
+            const amount = (Number(item.unitCost ?? product.unitCost) || 0) * quantity;
+            const record = { date: new Date().toISOString(), vendor: entry.vendor, productId, name: item.name || product.name, size, quantity, amount };
+            entry.returns = [...(entry.returns || []), record];
+            entry.vendorCredits = { ...(entry.vendorCredits || {}) };
+            entry.vendorCredits[entry.vendor] = (Number(entry.vendorCredits[entry.vendor]) || 0) + amount;
+            entry.vendorCredit = Object.values(entry.vendorCredits).reduce((sum, value) => sum + (Number(value) || 0), 0);
+            saveState();
+            filterInventory();
+            openPurchaseOrderDetails(entryId);
+            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
+            showToast(`${quantity} unit(s) returned. ${formatRupees(amount)} added to ${entry.vendor}'s vendor credit.`);
+        }
+
+        function startEditPurchaseOrder(entryId) {
+            const entry = inventoryEntries.find(item => item.id === entryId);
+            if (!entry) return;
+            document.getElementById('edit-purchase-id').value = entry.id;
+            document.getElementById('edit-purchase-vendor').value = entry.vendor || '';
+            document.getElementById('edit-purchase-date').value = String(entry.date || '').slice(0, 10);
+            document.getElementById('edit-purchase-styles').innerHTML = getPurchaseEntryStyles(entry).map(style => {
+                const sizeQuantities = style.sizeQuantities || {};
+                const sizeFields = Object.keys(sizeQuantities).length ? `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${Object.entries(sizeQuantities).map(([size, quantity]) => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(quantity) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>` : '<p class="sm:col-span-2 text-[10px] text-gray-400">Size quantities are not tracked for this style.</p>';
+                return `
+                <div class="rounded-xl border border-sundari-gold/20 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2" data-edit-style-id="${escapeHtml(style.id)}">
+                    <label class="text-[11px] font-semibold">Style name<input data-edit-field="name" value="${escapeHtml(style.name)}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Image URL<input data-edit-field="image" value="${escapeHtml(style.image || '')}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Unit cost (₹)<input data-edit-field="unitCost" type="number" min="0" step="0.01" value="${Number(style.unitCost) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Selling price (₹)<input data-edit-field="price" type="number" min="0" step="0.01" value="${Number(style.price) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    ${sizeFields}
+                </div>`;
+            }).join('');
+            document.getElementById('edit-purchase-charges').innerHTML = '';
+            (entry.charges || []).forEach(charge => addEditPurchaseCharge(charge));
+            closeModal('purchase-order-detail-modal');
+            openModal('purchase-order-edit-modal');
+        }
+
+        function addEditPurchaseCharge(charge = {}) {
+            const row = document.createElement('div');
+            row.className = 'edit-purchase-charge grid grid-cols-[1fr_7rem_auto] gap-2';
+            const description = document.createElement('input');
+            description.dataset.editField = 'description'; description.value = charge.description || ''; description.placeholder = 'Charge description'; description.className = 'p-2 border rounded-lg text-sm min-w-0';
+            const amount = document.createElement('input');
+            amount.dataset.editField = 'amount'; amount.type = 'number'; amount.min = '0'; amount.step = '0.01'; amount.value = Number(charge.amount) || 0; amount.className = 'p-2 border rounded-lg text-sm min-w-0';
+            const remove = document.createElement('button');
+            remove.type = 'button'; remove.className = 'px-2 text-rose-600'; remove.innerHTML = '<i class="fa-solid fa-trash"></i>'; remove.onclick = () => row.remove();
+            row.append(description, amount, remove);
+            document.getElementById('edit-purchase-charges').appendChild(row);
+        }
+
+        function savePurchaseOrderEdit(event) {
+            event.preventDefault();
+            const entry = inventoryEntries.find(item => item.id === document.getElementById('edit-purchase-id').value);
+            if (!entry) return;
+            const oldVendor = entry.vendor;
+            const newVendor = document.getElementById('edit-purchase-vendor').value.trim();
+            if (!newVendor) return showToast('Enter a vendor name.');
+            const styleUpdates = [...document.querySelectorAll('#edit-purchase-styles [data-edit-style-id]')].map(card => {
+                const productId = card.dataset.editStyleId;
+                const product = inventory.find(item => item.id === productId);
+                const orderItem = (entry.items || []).find(item => item.id === productId);
+                if (!product || !orderItem) return null;
+                const newSizeQuantities = Object.fromEntries([...card.querySelectorAll('[data-edit-size]')].map(input => [input.dataset.editSize, Math.max(0, Math.floor(Number(input.value) || 0))]));
+                const previousSizeQuantities = orderItem.sizeQuantities || {};
+                for (const size of Object.keys(newSizeQuantities)) {
+                    const currentQuantity = Number(product.sizeQuantities?.[size]) || 0;
+                    const changedBy = newSizeQuantities[size] - (Number(previousSizeQuantities[size]) || 0);
+                    if (currentQuantity + changedBy < 0) {
+                        showToast(`Cannot reduce ${size} by more than the remaining stock for ${product.name}.`);
+                        return null;
+                    }
+                }
+                const field = name => card.querySelector(`[data-edit-field="${name}"]`).value.trim();
+                return { card, product, orderItem, newSizeQuantities, name: field('name') || product.name, image: field('image') || 'assets/default.jpeg', unitCost: Number(card.querySelector('[data-edit-field="unitCost"]').value) || 0, price: Number(card.querySelector('[data-edit-field="price"]').value) || 0 };
+            });
+            if (styleUpdates.some(update => !update)) return;
+            entry.vendor = newVendor;
+            const date = document.getElementById('edit-purchase-date').value;
+            entry.date = date ? new Date(`${date}T12:00:00`).toISOString() : entry.date;
+            styleUpdates.forEach(({ product, orderItem, newSizeQuantities, name, image, unitCost, price }) => {
+                if (Object.keys(newSizeQuantities).length) {
+                    const currentSizeQuantities = { ...(product.sizeQuantities || {}) };
+                    Object.entries(newSizeQuantities).forEach(([size, quantity]) => {
+                        const previousQuantity = Number(orderItem.sizeQuantities?.[size]) || 0;
+                        currentSizeQuantities[size] = Math.max(0, (Number(currentSizeQuantities[size]) || 0) + quantity - previousQuantity);
+                    });
+                    product.sizeQuantities = currentSizeQuantities;
+                    product.sizes = Object.keys(currentSizeQuantities);
+                    product.stock = Object.values(currentSizeQuantities).reduce((sum, quantity) => sum + (Number(quantity) || 0), 0);
+                    orderItem.sizeQuantities = newSizeQuantities;
+                    orderItem.sizes = Object.keys(newSizeQuantities);
+                    orderItem.stock = Object.values(newSizeQuantities).reduce((sum, quantity) => sum + (Number(quantity) || 0), 0);
+                }
+                product.name = name; product.image = getEmbeddableImageUrl(image); product.unitCost = unitCost; product.price = price; product.vendor = entry.vendor;
+                orderItem.name = name; orderItem.image = product.image; orderItem.unitCost = unitCost; orderItem.price = price;
+            });
+            entry.charges = [...document.querySelectorAll('#edit-purchase-charges .edit-purchase-charge')].map(row => ({
+                description: row.querySelector('[data-edit-field="description"]').value.trim() || 'Additional charge',
+                amount: Number(row.querySelector('[data-edit-field="amount"]').value) || 0
+            })).filter(charge => charge.amount > 0);
+            entry.itemSubtotal = (entry.items || []).reduce((sum, item) => sum + (Number(item.unitCost) || 0) * (Number(item.stock) || 0), 0);
+            entry.chargeTotal = entry.charges.reduce((sum, charge) => sum + charge.amount, 0);
+            entry.grandTotal = entry.itemSubtotal + entry.chargeTotal;
+            if (entry.vendor && !vendors.includes(entry.vendor)) vendors.push(entry.vendor);
+            if (oldVendor && !inventoryEntries.some(item => item.vendor === oldVendor) && !inventory.some(item => item.vendor === oldVendor)) vendors = vendors.filter(vendor => vendor !== oldVendor);
+            saveState();
+            populateInventoryVendors(); populatePurchaseVendorFilter(); renderPurchaseOrders();
+            closeModal('purchase-order-edit-modal');
+            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
+            showToast(`Purchase order ${entry.id} updated.`);
         }
 
         function toggleNewVendorField() {
@@ -1166,6 +1355,10 @@
             return { styles, charges, itemSubtotal, chargeTotal, grandTotal: itemSubtotal + chargeTotal };
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+        }
+
         function formatRupees(amount) {
             return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
         }
@@ -1202,7 +1395,7 @@
                     price: style.price,
                     unitCost: style.unitCost,
                     stock: style.stock,
-                    image: style.image ? getEmbeddableImageUrl(style.image) : 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=500&q=80',
+                    image: style.image ? getEmbeddableImageUrl(style.image) : 'assets/default.jpeg',
                     vendor,
                     inventoryEntryId: entryId
                 };
@@ -1295,6 +1488,7 @@
             const lineItems = getOrderLineItems(order);
             const itemSubtotal = Number(order.itemsSubtotal ?? (Number(order.total) - (Number(order.shipping) || 0))) || 0;
             const shipping = Number(order.shipping) || 0;
+            const discount = Number(order.discount) || 0;
             document.getElementById('order-detail-title').textContent = order.id;
             document.getElementById('order-detail-content').innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -1313,6 +1507,7 @@
                 <div class="ml-auto max-w-xs space-y-1 text-sm">
                     <div class="flex justify-between gap-6 text-gray-600"><span>Items subtotal</span><span>${formatRupees(itemSubtotal)}</span></div>
                     <div class="flex justify-between gap-6 text-gray-600"><span>Shipping</span><span>${formatRupees(shipping)}</span></div>
+                    ${discount ? `<div class="flex justify-between gap-6 text-gray-600"><span>Discount</span><span>−${formatRupees(discount)}</span></div>` : ''}
                     <div class="flex justify-between gap-6 border-t border-sundari-gold/30 pt-2 font-bold text-sundari-purple"><span>Total</span><span>${formatRupees(Number(order.total) || 0)}</span></div>
                 </div>
             `;
@@ -1356,46 +1551,53 @@
         }
 
         function getOrderRevenue(order) {
-            if (order.itemsSubtotal !== undefined && order.itemsSubtotal !== null) return Number(order.itemsSubtotal) || 0;
-            return Math.max(0, (Number(order.total) || 0) - (Number(order.shipping) || 0));
+            const gross = order.itemsSubtotal !== undefined && order.itemsSubtotal !== null
+                ? Number(order.itemsSubtotal) || 0
+                : Math.max(0, (Number(order.total) || 0) - (Number(order.shipping) || 0) + (Number(order.discount) || 0));
+            return Math.max(0, gross - (Number(order.discount) || 0));
         }
 
-        function calculateProfitLoss() {
-            let revenue = 0;
-            let costOfGoodsSold = 0;
-            let unitsSold = 0;
-            let unitsWithCost = 0;
-            orders.forEach(order => {
-                revenue += getOrderRevenue(order);
-                getOrderLineItems(order).forEach(item => {
-                    const quantity = Math.max(1, Number(item.quantity ?? item.qty) || 1);
-                    unitsSold += quantity;
-                    if (item.unitCost !== undefined && item.unitCost !== null && Number.isFinite(Number(item.unitCost))) {
-                        costOfGoodsSold += Number(item.unitCost) * quantity;
-                        unitsWithCost += quantity;
-                    }
-                });
+        function getOrderCostInfo(order) {
+            const lineItems = getOrderLineItems(order);
+            if (!lineItems.length) return { value: null, complete: false };
+            let value = 0;
+            let complete = true;
+            lineItems.forEach(item => {
+                const quantity = Math.max(1, Number(item.quantity ?? item.qty) || 1);
+                const product = inventory.find(candidate => candidate.id === item.id);
+                const unitCost = item.unitCost === null
+                    ? null
+                    : (item.unitCost !== undefined && Number.isFinite(Number(item.unitCost))
+                        ? Number(item.unitCost)
+                        : (product && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null));
+                if (unitCost === null) complete = false;
+                else value += unitCost * quantity;
             });
-            return { value: unitsWithCost ? revenue - costOfGoodsSold : null, unitsSold, unitsWithCost };
+            return { value: complete ? value : null, partialValue: value, complete };
+        }
+
+        function getOrderProfit(order) {
+            const cost = getOrderCostInfo(order);
+            return cost.complete ? getOrderRevenue(order) - cost.value : null;
         }
 
         function renderDashboard() {
             const salesRevenue = orders.reduce((sum, order) => sum + getOrderRevenue(order), 0);
             const purchaseTotal = inventoryEntries.reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
+            const vendorCreditTotal = inventoryEntries.reduce((sum, entry) => sum + (Number(entry.vendorCredit) || 0), 0);
             const stockUnits = inventory.reduce((sum, product) => sum + (Number(product.stock) || 0), 0);
             const completedOrders = orders.filter(order => !order.status || order.status.toLowerCase() === 'completed').length;
             const averageOrder = orders.length ? salesRevenue / orders.length : 0;
-            const profitLoss = calculateProfitLoss();
-            const profitTone = profitLoss.value === null ? 'text-gray-600 bg-gray-50' : profitLoss.value < 0 ? 'text-red-700 bg-red-50' : 'text-emerald-700 bg-emerald-50';
-            const profitDetail = profitLoss.unitsWithCost
-                ? `Gross estimate · cost recorded for ${profitLoss.unitsWithCost}/${profitLoss.unitsSold} units`
-                : 'No recorded unit costs for sold items';
+            const profitLossValue = purchaseTotal - salesRevenue;
+            const profitTone = profitLossValue > 0 ? 'text-red-700 bg-red-50' : 'text-emerald-700 bg-emerald-50';
+            const profitDetail = 'Total purchase value − total sale value';
             const metrics = [
                 { label: 'Sales Revenue', value: formatRupees(salesRevenue), detail: `${orders.length} recorded orders`, icon: 'fa-sack-dollar', tone: 'text-emerald-700 bg-emerald-50' },
                 { label: 'Recorded Purchases', value: formatRupees(purchaseTotal), detail: `${inventoryEntries.length} vendor entries`, icon: 'fa-file-invoice-dollar', tone: 'text-amber-700 bg-amber-50' },
+                { label: 'Vendor Credit', value: formatRupees(vendorCreditTotal), detail: 'Recorded item returns', icon: 'fa-rotate-left', tone: 'text-orange-700 bg-orange-50' },
                 { label: 'Stock Quantity', value: stockUnits.toLocaleString('en-IN'), detail: `${inventory.length} product styles`, icon: 'fa-boxes-stacked', tone: 'text-sundari-purple bg-sundari-purple/5' },
                 { label: 'Completed Orders', value: completedOrders.toLocaleString('en-IN'), detail: `Average order ${formatRupees(averageOrder)}`, icon: 'fa-receipt', tone: 'text-sky-700 bg-sky-50' },
-                { label: 'Profit / Loss (estimate)', value: profitLoss.value === null ? '—' : formatRupees(profitLoss.value), detail: profitDetail, icon: profitLoss.value !== null && profitLoss.value < 0 ? 'fa-arrow-trend-down' : 'fa-arrow-trend-up', tone: profitTone }
+                { label: 'Profit / Loss', value: formatRupees(profitLossValue), detail: profitDetail, icon: profitLossValue > 0 ? 'fa-arrow-trend-down' : 'fa-arrow-trend-up', tone: profitTone }
             ];
             document.getElementById('dashboard-metrics').innerHTML = metrics.map(metric => `
                 <div class="rounded-2xl border border-sundari-gold/20 p-3 sm:p-4 ${metric.tone}">
@@ -1406,20 +1608,6 @@
             `).join('');
             document.getElementById('dashboard-updated').textContent = `Updated ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}`;
 
-            const categoryTotals = inventory.reduce((totals, product) => {
-                const category = product.category || 'Uncategorized';
-                totals[category] = (totals[category] || 0) + (Number(product.stock) || 0);
-                return totals;
-            }, {});
-            const categories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
-            const maxCategoryStock = Math.max(1, ...categories.map(([, quantity]) => quantity));
-            document.getElementById('dashboard-stock-categories').innerHTML = categories.length ? categories.map(([category, quantity]) => `
-                <div>
-                    <div class="flex justify-between text-xs mb-1"><span class="font-semibold text-sundari-purple">${category}</span><span class="text-gray-500">${quantity.toLocaleString('en-IN')} units</span></div>
-                    <div class="h-2 rounded-full bg-sundari-cream overflow-hidden"><div class="h-full rounded-full bg-sundari-gold" style="width:${(quantity / maxCategoryStock * 100).toFixed(1)}%"></div></div>
-                </div>
-            `).join('') : '<p class="text-xs text-gray-400">No inventory recorded.</p>';
-
             const recentPurchases = inventoryEntries.slice(0, 5);
             document.getElementById('dashboard-purchases').innerHTML = recentPurchases.length ? recentPurchases.map(entry => `
                 <div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
@@ -1429,12 +1617,30 @@
             `).join('') : '<p class="text-xs text-gray-400">No vendor purchases recorded yet.</p>';
 
             const recentSales = orders.slice(0, 5);
-            document.getElementById('dashboard-sales').innerHTML = recentSales.length ? `
-                <table class="w-full text-left text-xs">
-                    <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer / Staff</th><th class="py-2 text-right">Revenue</th></tr></thead>
-                    <tbody>${recentSales.map(order => `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${order.id}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${order.customer || 'Walk-in Customer'}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(Number(order.total) || 0)}</td></tr>`).join('')}</tbody>
-                </table>
-            ` : '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
+            document.getElementById('dashboard-sales').innerHTML = renderSalesRevenueTable(recentSales);
+        }
+
+        function renderSalesRevenueTable(saleOrders) {
+            if (!saleOrders.length) return '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
+            return `<table class="w-full min-w-[660px] text-left text-xs">
+                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3 text-right">Sale value</th><th class="py-2 pr-3 text-right">Purchase value</th><th class="py-2 text-right">Revenue</th></tr></thead>
+                <tbody>${saleOrders.map(order => {
+                    const cost = getOrderCostInfo(order);
+                    const profit = getOrderProfit(order);
+                    return `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${order.id}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${order.customer || 'Walk-in Customer'}</td><td class="py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td><td class="py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
+                }).join('')}</tbody></table>`;
+        }
+
+        function openSalesRevenueModal() {
+            const allRevenue = orders.reduce((sum, order) => sum + getOrderRevenue(order), 0);
+            const knownCosts = orders.map(getOrderCostInfo).filter(info => info.complete).reduce((sum, info) => sum + info.value, 0);
+            const knownProfit = orders.filter(order => getOrderCostInfo(order).complete).reduce((sum, order) => sum + getOrderProfit(order), 0);
+            document.getElementById('sales-revenue-list').innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-xs">
+                <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Total sale value</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(allRevenue)}</strong></div>
+                <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Purchase value of known costs</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(knownCosts)}</strong></div>
+                <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Revenue after purchase cost</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(knownProfit)}</strong></div>
+            </div><div class="overflow-x-auto">${renderSalesRevenueTable(orders)}</div><p class="mt-2 text-[10px] text-gray-400">Orders without recorded item costs show — for purchase value and revenue.</p>`;
+            openModal('sales-revenue-modal');
         }
 
         function formatDashboardDate(value) {
