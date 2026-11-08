@@ -680,6 +680,17 @@
             if (purchaseView && !purchaseView.classList.contains('hidden')) renderPurchaseOrders();
         }
 
+        function nextSequentialId(prefix, records) {
+            const existingIds = new Set((records || []).map(record => String(record.id || '')));
+            let sequence = 1;
+            let candidate = `${prefix}-${String(sequence).padStart(3, '0')}`;
+            while (existingIds.has(candidate)) {
+                sequence += 1;
+                candidate = `${prefix}-${String(sequence).padStart(3, '0')}`;
+            }
+            return candidate;
+        }
+
         function loadSharedData() {
             return new Promise((resolve, reject) => {
                 const callbackName = `sundariSheetLoad_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -971,7 +982,7 @@
 
             // 2. Log Order
             const newOrder = {
-                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                id: nextSequentialId('ORD', orders),
                 date: new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
                 customer: customerName,
                 customerNumber,
@@ -1397,7 +1408,7 @@
             if (draft.charges.some(charge => charge.amount > 0 && charge.description === 'Additional charge')) return showToast('Add a description for each additional charge.');
 
             if (!vendors.some(existing => existing.toLowerCase() === vendor.toLowerCase())) vendors.push(vendor);
-            const entryId = `VEN-${Date.now()}`;
+            const entryId = nextSequentialId('PO', inventoryEntries);
             const newProducts = draft.styles.map((style, index) => {
                 const sizeQuantities = Object.fromEntries(style.sizes.map(row => [row.size, row.quantity]));
                 return {
