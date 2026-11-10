@@ -250,8 +250,11 @@
             </div>
         </section>
 
-        <!-- VIEW 3: ORDERS LOG VIEW (UPDATED TO DASHBOARD SALE RECORDS CONTENT & FORMAT) -->
-        <section id="view-orders" class="hidden">
+        <!-- VIEW 3: ORDERS LOG VIEW (UPDATED WITH SUMMARY CARD AND PURCHASE VALUE & REVENUE COLUMNS) -->
+        <section id="view-orders" class="hidden space-y-4">
+            <div id="orders-summary-card" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <!-- Injected dynamically via JS -->
+            </div>
             <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
                 <div class="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-gray-100">
                     <div>
@@ -263,7 +266,7 @@
                     </button>
                 </div>
                 <div id="orders-records-container" class="overflow-x-auto">
-                    <!-- Injected dynamically using dashboard sale records style -->
+                    <!-- Injected dynamically using detailed columns -->
                 </div>
             </div>
         </section>
@@ -440,15 +443,27 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                         <label class="block font-semibold text-sundari-purple mb-1">Vendor *</label>
-                        <select id="inv-vendor" required onchange="toggleNewVendorField()" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                        <select id="inv-vendor" required onchange="handleVendorSelectionChange()" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
                             <option value="">Select a vendor</option>
                             <option value="__new__">+ Add a new vendor</option>
                         </select>
                     </div>
                     <div id="new-vendor-wrap" class="hidden">
                         <label class="block font-semibold text-sundari-purple mb-1">New Vendor Name *</label>
-                        <input type="text" id="inv-new-vendor" placeholder="Vendor name" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                        <input type="text" id="inv-new-vendor" placeholder="Vendor name" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm" oninput="handleVendorSelectionChange()">
                     </div>
+                </div>
+
+                <!-- Vendor Credit Section -->
+                <div id="vendor-credit-section" class="hidden rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="apply-vendor-credit" onchange="updateInventoryEntryTotals()" class="w-4 h-4 text-sundari-purple rounded border-amber-300 focus:ring-sundari-purple">
+                            <span class="font-bold text-amber-900 text-xs">Use available vendor credit (<span id="available-vendor-credit-text">₹0</span>)</span>
+                        </label>
+                        <span id="applied-credit-display" class="font-bold text-amber-800 text-xs">−₹0</span>
+                    </div>
+                    <p class="text-[10px] text-amber-700">Check this box to adjust the total bill amount using returns credit from this vendor.</p>
                 </div>
 
                 <div class="flex items-center justify-between pt-1">
@@ -494,6 +509,7 @@
                 <div class="bg-sundari-purple/5 rounded-xl p-3 text-sm space-y-1">
                     <div class="flex justify-between"><span>Items subtotal</span><strong id="inv-items-total">₹0</strong></div>
                     <div class="flex justify-between"><span>Additional charges</span><strong id="inv-charges-total">₹0</strong></div>
+                    <div id="inv-applied-credit-row" class="hidden flex justify-between text-amber-800"><span>Vendor credit applied</span><strong id="inv-applied-credit-val">−₹0</strong></div>
                     <div class="flex justify-between border-t border-sundari-gold/30 pt-1 text-sundari-purple"><span class="font-bold">Total vendor entry</span><strong id="inv-grand-total">₹0</strong></div>
                 </div>
 
@@ -555,9 +571,7 @@
     <footer class="bg-sundari-purple border-t border-sundari-gold/30 py-4 text-center text-xs text-sundari-goldLight/70 mt-8">
         <p>&copy; 2026 SUNDARI Garment Management System • Internal Use</p>
     </footer>
-
-    <!-- JAVASCRIPT APPLICATION LOGIC -->
-    <script>
+<script>
         // --- INITIAL DATA SEEDING ---
         const initialProducts = [];
         // Set this to the deployed Google Apps Script /exec URL before publishing the site.
@@ -1523,8 +1537,34 @@
         // --- RENDER TABLES & VIEWS ---
         function renderOrdersTable() {
             const container = document.getElementById('orders-records-container');
-            if (!container) return;
-            container.innerHTML = renderSalesRevenueTable(orders, false);
+            const summaryContainer = document.getElementById('orders-summary-card');
+            if (!container || !summaryContainer) return;
+
+            // Render Summary Card
+            const allRevenue = orders.reduce((sum, order) => sum + getOrderRevenue(order), 0);
+            const knownCosts = orders.map(getOrderCostInfo).filter(info => info.complete).reduce((sum, info) => sum + info.value, 0);
+            const knownProfit = orders.filter(order => getOrderCostInfo(order).complete).reduce((sum, order) => sum + getOrderProfit(order), 0);
+            
+            summaryContainer.innerHTML = `
+                <div class="rounded-2xl border border-sundari-gold/20 p-3 sm:p-4 bg-emerald-50 text-emerald-700">
+                    <p class="text-[11px] sm:text-xs font-semibold opacity-80">Total Sale Value</p>
+                    <p class="mt-2 text-lg sm:text-2xl font-bold leading-tight">${formatRupees(allRevenue)}</p>
+                    <p class="mt-1 text-[10px] opacity-70">${orders.length} recorded orders</p>
+                </div>
+                <div class="rounded-2xl border border-sundari-gold/20 p-3 sm:p-4 bg-amber-50 text-amber-700">
+                    <p class="text-[11px] sm:text-xs font-semibold opacity-80">Purchase Value</p>
+                    <p class="mt-2 text-lg sm:text-2xl font-bold leading-tight">${formatRupees(knownCosts)}</p>
+                    <p class="mt-1 text-[10px] opacity-70">Item costs for sold items</p>
+                </div>
+                <div class="rounded-2xl border border-sundari-gold/20 p-3 sm:p-4 bg-sundari-purple/5 text-sundari-purple">
+                    <p class="text-[11px] sm:text-xs font-semibold opacity-80">Revenue</p>
+                    <p class="mt-2 text-lg sm:text-2xl font-bold leading-tight">${formatRupees(knownProfit)}</p>
+                    <p class="mt-1 text-[10px] opacity-70">Sale value minus purchase value</p>
+                </div>
+            `;
+
+            // Render Orders Table with Purchase Value & Revenue Columns
+            container.innerHTML = renderSalesRevenueTable(orders, true);
         }
 
         function getOrderLineItems(order) {
@@ -1898,6 +1938,8 @@
             statusUrl.searchParams.set('check', '1');
             window.open(statusUrl.toString(), '_blank', 'noopener');
         }
-    </script>
+   </script>
+	
+	
 </body>
 </html>
