@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUNDARI - Garment & Inventory Management</title>
+    <title>SUNDARI LABEL</title>
+    <meta name="theme-color" content="#3A1032">
+    <meta name="description" content="SUNDARI inventory and sales management">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SUNDARI">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -88,9 +96,43 @@
             object-fit: contain;
             filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.1));
         }
+        #startup-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: #f7f4eb;
+            transition: opacity 180ms ease, visibility 180ms ease;
+        }
+        #startup-loading.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .startup-spinner {
+            width: 38px;
+            height: 38px;
+            border: 4px solid rgba(58, 16, 50, 0.15);
+            border-top-color: #D4AF37;
+            border-radius: 50%;
+            animation: sundari-spin 850ms linear infinite;
+        }
+        @keyframes sundari-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-textured min-h-screen flex flex-col justify-between select-none">
+
+    <div id="startup-loading" role="status" aria-live="polite">
+        <div class="flex flex-col items-center text-center text-sundari-purple">
+            <img src="./assets/icon-192.png" alt="" class="h-20 w-20 object-contain mb-4">
+            <div class="startup-spinner" aria-hidden="true"></div>
+            <p class="mt-4 font-brand font-bold">Loading SUNDARI</p>
+            <p class="mt-1 text-xs text-gray-500">Loading your inventory and orders…</p>
+        </div>
+    </div>
 
     <!-- APP HEADER -->
     <header class="sticky top-0 z-40 app-header border-b border-sundari-gold/30 px-2 py-1 custom-shadow h-16 flex items-center">
@@ -123,16 +165,9 @@
                     <a href="#" onclick="switchView('orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-receipt w-6 text-sundari-gold"></i> Orders
                     </a>
-                    <a href="#" onclick="switchView('preorders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
-                        <i class="fa-solid fa-clipboard-list w-6 text-sundari-gold"></i> Preorders / Request
-                    </a>
                     <div class="border-t border-gray-100 my-1"></div>
                     <a href="#" onclick="openModal('settings-modal'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-sundari-gold/10 transition">
-                        <i class="fa-solid fa-cloud-arrow-up w-6 text-sundari-gold"></i> Sync Google Sheets
-                    </a>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <a href="#" onclick="resetApplication(); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50 transition">
-                        <i class="fa-solid fa-rotate-left w-6 text-red-500"></i> Reset App Data
+                        <i class="fa-solid fa-gear w-6 text-sundari-gold"></i> Settings
                     </a>
                 </div>
             </div>
@@ -142,43 +177,56 @@
     <!-- MAIN CONTENT AREA -->
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
         
-        <!-- TOP STATS BAR & QUICK SEARCH -->
-        <div id="inventory-toolbar" class="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-sundari-gold/20 shadow-sm">
-            <!-- Search & Filters -->
-            <div class="flex flex-col sm:flex-row gap-2 flex-1">
-                <div class="relative flex-1">
+        <!-- TOP STATS BAR & QUICK SEARCH (SINGLE ROW ON WEB VIEW) -->
+        <div id="inventory-toolbar" class="mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-sundari-gold/20 shadow-sm">
+            <!-- Search & Filters (Single Row on Desktop) -->
+            <div class="flex flex-col lg:flex-row lg:items-center gap-2 flex-1 min-w-0">
+                <!-- Search Input -->
+                <div class="relative flex-1 min-w-[200px]">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                     <input type="text" id="search-input" oninput="filterInventory()" placeholder="Search garments by name, SKU, size..." class="w-full pl-9 pr-4 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark placeholder-gray-400">
                 </div>
-                <div class="relative sm:w-48">
-                    <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
-                    <select id="inventory-stock-filter" onchange="filterInventory()" aria-label="Filter inventory by stock availability" class="w-full pl-8 pr-3 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
-                        <option value="available" selected>Available items</option>
-                        <option value="out-of-stock">Out of stock</option>
-                        <option value="all">All items</option>
-                    </select>
-                </div>
-                <div class="relative sm:w-36">
-                    <i class="fa-solid fa-ruler-horizontal absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
-                    <select id="inventory-size-filter" onchange="filterInventory()" aria-label="Filter inventory by size" class="w-full pl-8 pr-3 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
-                        <option value="all" selected>All</option>
-                        <option value="M">M</option>
-                        <option value="L">L</option>
-                        <option value="XL">XL</option>
-                        <option value="XXL">XXL</option>
-                    </select>
+                <!-- Filters Grid for Mobile, Row for Desktop -->
+                <div class="grid grid-cols-3 lg:flex lg:items-center gap-1.5 sm:gap-2">
+                    <div class="relative w-full min-w-0 lg:w-40">
+                        <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
+                        <select id="inventory-stock-filter" onchange="filterInventory()" aria-label="Filter inventory by stock availability" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                            <option value="available" selected>Available items</option>
+                            <option value="out-of-stock">Out of stock</option>
+                            <option value="all">All items</option>
+                        </select>
+                    </div>
+                    <div class="relative w-full min-w-0 lg:w-32">
+                        <i class="fa-solid fa-ruler-horizontal absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
+                        <select id="inventory-size-filter" onchange="filterInventory()" aria-label="Filter inventory by size" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                            <option value="all" selected>All sizes</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                        </select>
+                    </div>
+                    <div class="relative w-full min-w-0 lg:w-40">
+                        <i class="fa-solid fa-arrow-down-wide-short absolute left-2.5 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
+                        <select id="inventory-sort-filter" onchange="filterInventory()" aria-label="Sort inventory" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                            <option value="oldest" selected>Sort</option>
+                            <option value="price-desc">₹ High to low</option>
+                            <option value="price-asc">₹ Low to high</option>
+                            <option value="newest">What's new</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             <!-- Stats Badge Bar -->
-            <div class="flex items-center justify-between sm:justify-end gap-3 text-xs">
-                <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-3 py-1.5 rounded-xl font-medium text-sundari-purple">
-                    Total Items: <span id="stat-total-stock" class="font-bold text-sundari-goldDark">0</span>
+            <div class="flex items-center justify-between lg:justify-end gap-2.5 text-xs shrink-0">
+                <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-3 py-2 rounded-xl font-medium text-sundari-purple whitespace-nowrap">
+                    Styles: <span id="stat-total-stock" class="font-bold text-sundari-goldDark">0</span>
                 </div>
-                <div class="bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium text-emerald-700">
+                <div class="bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl font-medium text-emerald-700 whitespace-nowrap">
                     Active Stock: <span id="stat-total-qty" class="font-bold">0</span>
                 </div>
-                <button onclick="switchView('inventory')" id="view-inventory-btn" class="hidden sm:inline-flex items-center px-3 py-1.5 bg-sundari-purple text-white rounded-xl text-xs font-semibold hover:bg-sundari-purpleDark transition">
+                <button onclick="switchView('inventory')" id="view-inventory-btn" class="hidden sm:inline-flex items-center px-3 py-2 bg-sundari-purple text-white rounded-xl text-xs font-semibold hover:bg-sundari-purpleDark transition whitespace-nowrap">
                     <i class="fa-solid fa-grid-2 mr-1.5"></i> Inventory Grid
                 </button>
             </div>
@@ -253,58 +301,25 @@
             </div>
         </section>
 
-        <!-- VIEW 3: ORDERS LOG VIEW -->
+        <!-- VIEW 3: ORDERS LOG VIEW (UPDATED TO DASHBOARD SALE RECORDS CONTENT & FORMAT) -->
         <section id="view-orders" class="hidden">
-            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
-                <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-5 custom-shadow">
+                <div class="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-gray-100">
                     <div>
-                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Sales Orders Log</h2>
-                        <p class="text-xs text-gray-500">Internal orders logged and stock decremented · Select an order to view its items</p>
+                        <h3 class="font-brand text-lg font-bold text-sundari-purple">Sale Records</h3>
+                        <p class="text-xs text-gray-500">All recorded orders · Click any record to view its full details</p>
                     </div>
-                    <button onclick="switchView('inventory')" class="text-xs text-sundari-purple font-bold hover:underline">
+                    <button onclick="switchView('inventory')" class="text-xs text-sundari-purple font-bold hover:underline whitespace-nowrap">
                         &larr; Back to Inventory
                     </button>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-sundari-cream text-sundari-purple font-semibold text-xs uppercase tracking-wider border-b border-sundari-gold/20">
-                                <th class="py-3 px-4">Order ID</th>
-                                <th class="py-3 px-4">Date & Time</th>
-                                <th class="py-3 px-4">Customer Name</th>
-                                <th class="py-3 px-4">Contact Number</th>
-                                <th class="py-3 px-4">Address</th>
-                                <th class="py-3 px-4 text-right">Total / Payment</th>
-                                <th class="py-3 px-4 text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-table-body" class="divide-y divide-gray-100 text-gray-700">
-                            <!-- Injected dynamically -->
-                        </tbody>
-                    </table>
+                <div id="orders-summary-cards" class="grid grid-cols-4 gap-1 sm:gap-3 mb-4"></div>
+                <div id="orders-records-container" class="overflow-x-auto">
+                    <!-- Injected dynamically using dashboard sale records style -->
                 </div>
             </div>
         </section>
 
-        <!-- VIEW 4: PREORDERS & REQUESTS VIEW -->
-        <section id="view-preorders" class="hidden">
-            <div class="bg-white rounded-2xl border border-sundari-gold/30 p-4 sm:p-6 custom-shadow">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-gray-100 gap-2">
-                    <div>
-                        <h2 class="font-brand text-xl font-bold text-sundari-purple">Preorders & Custom Requests</h2>
-                        <p class="text-xs text-gray-500">Pending restocks or custom saree/garment reservations</p>
-                    </div>
-                    <button onclick="openModal('add-preorder-modal')" class="px-3 py-2 bg-sundari-gold text-sundari-purple font-bold rounded-xl text-xs hover:bg-sundari-goldDark hover:text-white transition">
-                        + Log Preorder Request
-                    </button>
-                </div>
-
-                <div id="preorder-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Dynamic Preorder cards injected here -->
-                </div>
-            </div>
-        </section>
     </main>
 
     <!-- FLOATING CART BUTTON (Fixed Bottom Right) -->
@@ -406,7 +421,7 @@
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
-                <button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex items-center gap-3"><button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button><button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
             </div>
             <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
         </div>
@@ -423,6 +438,7 @@
         </div>
     </div>
 
+    <!-- EDIT PURCHASE ORDER MODAL -->
     <div id="purchase-order-edit-modal" class="fixed inset-0 z-[70] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
@@ -435,7 +451,9 @@
                     <label class="text-xs font-semibold text-sundari-purple">Vendor<input id="edit-purchase-vendor" required class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg text-sm"></label>
                     <label class="text-xs font-semibold text-sundari-purple">Purchase date<input id="edit-purchase-date" type="date" required class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg text-sm"></label>
                 </div>
-                <div><h4 class="text-sm font-bold text-sundari-purple mb-2">Style details</h4><div id="edit-purchase-styles" class="space-y-2"></div></div>
+                <div>
+                    <div id="edit-purchase-styles" class="space-y-2"></div>
+                </div>
                 <div><div class="flex justify-between items-center mb-2"><h4 class="text-sm font-bold text-sundari-purple">Additional charges</h4><button type="button" onclick="addEditPurchaseCharge()" class="text-xs text-sundari-purple font-bold">+ Add charge</button></div><div id="edit-purchase-charges" class="space-y-2"></div></div>
                 <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('purchase-order-edit-modal')" class="px-4 py-2 border rounded-lg text-sm">Cancel</button><button type="submit" class="px-4 py-2 bg-sundari-purple text-sundari-gold rounded-lg font-bold text-sm">Save Changes</button></div>
             </form>
@@ -452,13 +470,13 @@
         </div>
     </div>
 
-    <div id="vendor-ledger-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
-        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
+    <div id="vendor-ledger-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-1 sm:p-3">
+        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Vendor ledger</p><h3 id="vendor-ledger-title" class="font-brand font-bold text-sundari-gold"></h3></div>
                 <button onclick="closeModal('vendor-ledger-modal')" aria-label="Close vendor ledger" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div id="vendor-ledger-content" class="p-4 sm:p-5"></div>
+            <div id="vendor-ledger-content" class="p-2 sm:p-5"></div>
         </div>
     </div>
 
@@ -501,7 +519,12 @@
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             <div><label class="block font-semibold text-sundari-purple mb-0.5">Item Name (optional)</label><input type="text" data-field="name" placeholder="e.g. Printed cotton kurti" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
-                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Image URL (optional)</label><input type="url" data-field="image" placeholder="Paste a direct or Google Drive image link" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"><p class="mt-0.5 text-[9px] text-gray-400">For Drive images, set access to Anyone with the link · Viewer.</p></div>
+                            <div>
+                                <label class="block font-semibold text-sundari-purple mb-0.5">Product image (optional)</label>
+                                <input type="text" data-field="image" placeholder="Paste an image URL" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                                <div class="mt-1 flex items-center gap-2"><input type="file" accept="image/*" aria-label="Choose product image from this device" onchange="handleInventoryImageUpload(this)" class="min-w-0 w-full text-[10px] text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-sundari-purple/10 file:px-2 file:py-1 file:text-[10px] file:font-semibold file:text-sundari-purple"><img data-image-preview alt="Selected product preview" class="hidden h-10 w-10 shrink-0 rounded-md object-cover border border-sundari-gold/30"></div>
+                                <p data-image-status class="mt-0.5 text-[9px] text-gray-400">Choose a photo or paste a URL. Uploaded photos are compressed to fit Google Sheets.</p>
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-1.5">
                             <div><label class="block font-semibold text-sundari-purple mb-0.5">Unit Cost (₹) *</label><input type="number" data-field="unitCost" required min="0.01" step="0.01" placeholder="450" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
@@ -539,39 +562,11 @@
         </div>
     </div>
 
-    <!-- MODAL 3: PREORDER REQUEST MODAL -->
-    <div id="add-preorder-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full custom-shadow overflow-hidden border border-sundari-gold/40">
-            <div class="bg-sundari-purple p-4 text-white flex justify-between items-center">
-                <h3 class="font-brand text-lg font-bold text-sundari-gold">New Preorder Request</h3>
-                <button onclick="closeModal('add-preorder-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <form id="preorder-form" onsubmit="handleAddPreorder(event)" class="p-5 space-y-3 text-xs">
-                <div>
-                    <label class="block font-semibold text-sundari-purple mb-1">Customer Name *</label>
-                    <input type="text" id="pre-customer" required placeholder="e.g. Ananya Rao" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
-                </div>
-                <div>
-                    <label class="block font-semibold text-sundari-purple mb-1">Garment Request Details *</label>
-                    <textarea id="pre-details" required rows="3" placeholder="e.g. Red Banarasi Silk Saree with heavy Zari border (Size: Free Size)" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm"></textarea>
-                </div>
-                <div>
-                    <label class="block font-semibold text-sundari-purple mb-1">Advance Amount Paid (₹)</label>
-                    <input type="number" id="pre-advance" min="0" placeholder="500" class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
-                </div>
-                <div class="pt-2 flex justify-end space-x-2">
-                    <button type="button" onclick="closeModal('add-preorder-modal')" class="px-4 py-2 border rounded-xl text-gray-600 font-semibold">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow">Submit Preorder</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL 4: GOOGLE SHEETS CONFIGURATION -->
+    <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full custom-shadow overflow-hidden border border-sundari-gold/40">
             <div class="bg-sundari-purple p-4 text-white flex justify-between items-center">
-                <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-file-excel mr-2"></i>Google Sheets Sync Setup</h3>
+                <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-gear mr-2"></i>Settings</h3>
                 <button onclick="closeModal('settings-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="p-5 space-y-4 text-xs text-gray-700">
@@ -598,6 +593,10 @@
                         <i class="fa-solid fa-rotate mr-1"></i> Sync Now
                     </button>
                     <button type="button" onclick="saveSheetSettings()" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow">Save &amp; Sync</button>
+                </div>
+                <div class="border-t border-gray-100 pt-3 flex items-center justify-between gap-3">
+                    <span class="text-[11px] text-gray-500">Clear app and connected Sheet records.</span>
+                    <button type="button" onclick="resetApplication()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-bold rounded-xl hover:bg-red-100">Reset App Data</button>
                 </div>
             </div>
         </div>
@@ -628,40 +627,42 @@
         let inventoryEntries = JSON.parse(localStorage.getItem('sundari_inventory_entries')) || [];
         let cart = JSON.parse(localStorage.getItem('sundari_cart')) || [];
         let orders = JSON.parse(localStorage.getItem('sundari_orders')) || [];
-        let preorders = JSON.parse(localStorage.getItem('sundari_preorders')) || [];
         let googleSheetEndpoint = SHARED_GOOGLE_SHEET_ENDPOINT || localStorage.getItem('sundari_sheet_url') || '';
 
         // --- INITIALIZATION ---
         window.onload = async function() {
-            if (googleSheetEndpoint) {
-                try {
-                    const sharedData = await loadSharedData();
-                    inventory = sharedData.inventory;
-                    inventoryEntries = sharedData.inventoryEntries;
-                    orders = sharedData.orders;
-                    vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
-                    localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-                    localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-                    localStorage.setItem('sundari_orders', JSON.stringify(orders));
-                    localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
-                } catch (error) {
-                    console.error('Google Sheets load error:', error);
-                    setTimeout(() => showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.'), 300);
+            try {
+                if (googleSheetEndpoint) {
+                    try {
+                        const sharedData = await loadSharedData();
+                        inventory = sharedData.inventory;
+                        inventoryEntries = sharedData.inventoryEntries;
+                        orders = sharedData.orders;
+                        vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                        localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+                        localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+                        localStorage.setItem('sundari_orders', JSON.stringify(orders));
+                        localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                    } catch (error) {
+                        console.error('Google Sheets load error:', error);
+                        setTimeout(() => showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.'), 300);
+                    }
                 }
-            }
-            populateInventoryVendors();
-            populatePurchaseVendorFilter();
-            addInventoryStyle();
-            document.getElementById('inventory-style-list').addEventListener('input', updateInventoryEntryTotals);
-            document.getElementById('inventory-charge-list').addEventListener('input', updateInventoryEntryTotals);
-            filterInventory();
-            updateCartUI();
-            renderOrdersTable();
-            renderPreorders();
-            renderPurchaseOrders();
-            updateStats();
-            if (googleSheetEndpoint) {
-                document.getElementById('google-sheet-url').value = googleSheetEndpoint;
+                populateInventoryVendors();
+                populatePurchaseVendorFilter();
+                addInventoryStyle();
+                document.getElementById('inventory-style-list').addEventListener('input', updateInventoryEntryTotals);
+                document.getElementById('inventory-charge-list').addEventListener('input', updateInventoryEntryTotals);
+                filterInventory();
+                updateCartUI();
+                renderOrdersTable();
+                renderPurchaseOrders();
+                updateStats();
+                if (googleSheetEndpoint) {
+                    document.getElementById('google-sheet-url').value = googleSheetEndpoint;
+                }
+            } finally {
+                document.getElementById('startup-loading')?.classList.add('hidden');
             }
         };
 
@@ -672,12 +673,13 @@
             localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
             localStorage.setItem('sundari_cart', JSON.stringify(cart));
             localStorage.setItem('sundari_orders', JSON.stringify(orders));
-            localStorage.setItem('sundari_preorders', JSON.stringify(preorders));
             updateStats();
             const dashboard = document.getElementById('view-dashboard');
             if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
             const purchaseView = document.getElementById('view-purchase-orders');
             if (purchaseView && !purchaseView.classList.contains('hidden')) renderPurchaseOrders();
+            const ordersView = document.getElementById('view-orders');
+            if (ordersView && !ordersView.classList.contains('hidden')) renderOrdersTable();
         }
 
         function nextSequentialId(prefix, records) {
@@ -1008,7 +1010,7 @@
                 discount: discountAmount,
                 paymentType,
                 total: itemsSubtotal + shippingCharge - discountAmount,
-                status: 'Completed'
+                status: 'Confirmed'
             };
 
             orders.unshift(newOrder);
@@ -1190,13 +1192,64 @@
             showToast(`${quantity} unit(s) returned. Vendor credit adjusted by ${formatRupees(amount)} after shipping.`);
         }
 
+        // --- EDIT PURCHASE ORDER & ADD NEW STYLES ---
+        function editPurchaseStyleRow(style = {}) {
+            return `
+            <div class="rounded-xl border border-sundari-gold/20 p-3 space-y-2 bg-sundari-cream/30" data-edit-new-style="true">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-sundari-purple">New Style</span>
+                    <button type="button" onclick="this.closest('[data-edit-new-style]').remove()" class="text-rose-600 text-xs font-semibold hover:text-rose-800">
+                        <i class="fa-solid fa-trash mr-1"></i>Remove
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label class="text-[11px] font-semibold">Style Name *<input data-new-field="name" value="${escapeHtml(style.name || '')}" placeholder="e.g. Silk Kurti" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Image URL<input data-new-field="image" value="${escapeHtml(style.image || '')}" placeholder="Direct or Google Drive link" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Unit Cost (₹) *<input data-new-field="unitCost" type="number" min="0.01" step="0.01" value="${Number(style.unitCost) || 0}" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <label class="text-[11px] font-semibold">Selling Price (₹) *<input data-new-field="price" type="number" min="0.01" step="0.01" value="${Number(style.price) || 0}" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-semibold text-sundari-purple">Size quantities *</span>
+                        <button type="button" onclick="addEditNewStyleSize(this)" class="text-[11px] text-sundari-purple font-semibold hover:underline">+ Add size</button>
+                    </div>
+                    <div class="edit-new-size-list grid grid-cols-2 sm:grid-cols-4 gap-1">
+                        ${['M', 'L', 'XL', 'XXL'].map(size => editNewSizeQuantityRow(size, 0)).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function editNewSizeQuantityRow(size = '', qty = 0) {
+            return `<div class="edit-size-qty-row flex items-center gap-1 bg-white border border-sundari-gold/40 rounded-xl px-2 py-1">
+                <input type="text" value="${size}" placeholder="Size" aria-label="Size" required class="edit-size-name w-1/2 p-0 text-center bg-transparent border-0 border-r border-sundari-gold/20 text-xs font-bold">
+                <input type="number" value="${qty}" min="0" step="1" placeholder="Quantity" aria-label="Quantity" required class="edit-size-val w-1/2 p-0 text-center bg-transparent border-0 text-xs">
+                <button type="button" onclick="this.closest('.edit-size-qty-row').remove()" class="text-gray-400 hover:text-red-600 text-[10px]"><i class="fa-solid fa-xmark"></i></button>
+            </div>`;
+        }
+
+        function addEditPurchaseStyle() {
+            const container = document.getElementById('edit-purchase-styles-list');
+            if (container) {
+                container.insertAdjacentHTML('beforeend', editPurchaseStyleRow());
+            }
+        }
+
+        function addEditNewStyleSize(button) {
+            const list = button.closest('div').querySelector('.edit-new-size-list');
+            if (list) {
+                list.insertAdjacentHTML('beforeend', editNewSizeQuantityRow('', 0));
+            }
+        }
+
         function startEditPurchaseOrder(entryId) {
             const entry = inventoryEntries.find(item => item.id === entryId);
             if (!entry) return;
             document.getElementById('edit-purchase-id').value = entry.id;
             document.getElementById('edit-purchase-vendor').value = entry.vendor || '';
             document.getElementById('edit-purchase-date').value = String(entry.date || '').slice(0, 10);
-            document.getElementById('edit-purchase-styles').innerHTML = getPurchaseEntryStyles(entry).map(style => {
+            
+            const stylesHtml = getPurchaseEntryStyles(entry).map(style => {
                 const sizeQuantities = style.sizeQuantities || {};
                 const sizeFields = Object.keys(sizeQuantities).length ? `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${Object.entries(sizeQuantities).map(([size, quantity]) => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(quantity) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>` : '<p class="sm:col-span-2 text-[10px] text-gray-400">Size quantities are not tracked for this style.</p>';
                 return `
@@ -1208,6 +1261,15 @@
                     ${sizeFields}
                 </div>`;
             }).join('');
+
+            document.getElementById('edit-purchase-styles').innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-sm font-bold text-sundari-purple">Style details</h4>
+                    <button type="button" onclick="addEditPurchaseStyle()" class="px-2.5 py-1 bg-sundari-purple text-sundari-gold rounded-lg text-xs font-bold hover:bg-sundari-purpleDark transition"><i class="fa-solid fa-plus mr-1"></i>Add Style</button>
+                </div>
+                <div id="edit-purchase-styles-list" class="space-y-2">${stylesHtml}</div>
+            `;
+
             document.getElementById('edit-purchase-charges').innerHTML = '';
             (entry.charges || []).forEach(charge => addEditPurchaseCharge(charge));
             closeModal('purchase-order-detail-modal');
@@ -1234,6 +1296,8 @@
             const oldVendor = entry.vendor;
             const newVendor = document.getElementById('edit-purchase-vendor').value.trim();
             if (!newVendor) return showToast('Enter a vendor name.');
+
+            // 1. Existing Styles Updates
             const styleUpdates = [...document.querySelectorAll('#edit-purchase-styles [data-edit-style-id]')].map(card => {
                 const productId = card.dataset.editStyleId;
                 const product = inventory.find(item => item.id === productId);
@@ -1253,9 +1317,51 @@
                 return { card, product, orderItem, newSizeQuantities, name: field('name') || product.name, image: field('image') || 'assets/default.jpeg', unitCost: Number(card.querySelector('[data-edit-field="unitCost"]').value) || 0, price: Number(card.querySelector('[data-edit-field="price"]').value) || 0 };
             });
             if (styleUpdates.some(update => !update)) return;
+
+            // 2. Newly Added Styles
+            const newStyleCards = [...document.querySelectorAll('#edit-purchase-styles [data-edit-new-style]')];
+            const newlyAddedProducts = [];
+            
+            for (const card of newStyleCards) {
+                const name = card.querySelector('[data-new-field="name"]').value.trim();
+                const image = card.querySelector('[data-new-field="image"]').value.trim();
+                const unitCost = Number(card.querySelector('[data-new-field="unitCost"]').value) || 0;
+                const price = Number(card.querySelector('[data-new-field="price"]').value) || 0;
+                
+                const sizeRows = [...card.querySelectorAll('.edit-size-qty-row')].map(row => ({
+                    size: row.querySelector('.edit-size-name').value.trim(),
+                    quantity: Math.max(0, parseInt(row.querySelector('.edit-size-val').value, 10) || 0)
+                })).filter(r => r.size);
+
+                if (!name || sizeRows.length === 0) {
+                    showToast('All new styles must have a name and at least one size quantity.');
+                    return;
+                }
+
+                const sizeQuantities = Object.fromEntries(sizeRows.map(r => [r.size, r.quantity]));
+                const stock = sizeRows.reduce((sum, r) => sum + r.quantity, 0);
+                
+                const newProduct = {
+                    id: `SU${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                    name,
+                    category: 'Uncategorized',
+                    sizes: sizeRows.map(r => r.size),
+                    sizeQuantities,
+                    price,
+                    unitCost,
+                    stock,
+                    image: image ? getEmbeddableImageUrl(image) : 'assets/default.jpeg',
+                    vendor: newVendor,
+                    inventoryEntryId: entry.id
+                };
+                newlyAddedProducts.push(newProduct);
+            }
+
             entry.vendor = newVendor;
             const date = document.getElementById('edit-purchase-date').value;
             entry.date = date ? new Date(`${date}T12:00:00`).toISOString() : entry.date;
+
+            // Save updates to existing products & order items
             styleUpdates.forEach(({ product, orderItem, newSizeQuantities, name, image, unitCost, price }) => {
                 if (Object.keys(newSizeQuantities).length) {
                     const currentSizeQuantities = { ...(product.sizeQuantities || {}) };
@@ -1273,20 +1379,44 @@
                 product.name = name; product.image = getEmbeddableImageUrl(image); product.unitCost = unitCost; product.price = price; product.vendor = entry.vendor;
                 orderItem.name = name; orderItem.image = product.image; orderItem.unitCost = unitCost; orderItem.price = price;
             });
+
+            // Insert new products into global inventory and entry item list
+            if (newlyAddedProducts.length > 0) {
+                inventory.unshift(...newlyAddedProducts);
+                const formattedNewItems = newlyAddedProducts.map(({ id, name, stock, unitCost, sizes, sizeQuantities, price, image }) => ({
+                    id, name, stock, unitCost, sizes, sizeQuantities, price, image
+                }));
+                entry.items = [...(entry.items || []), ...formattedNewItems];
+            }
+
             entry.charges = [...document.querySelectorAll('#edit-purchase-charges .edit-purchase-charge')].map(row => ({
                 description: row.querySelector('[data-edit-field="description"]').value.trim() || 'Additional charge',
                 amount: Number(row.querySelector('[data-edit-field="amount"]').value) || 0
             })).filter(charge => charge.amount > 0);
-            entry.itemSubtotal = (entry.items || []).reduce((sum, item) => sum + (Number(item.unitCost) || 0) * (Number(item.stock) || 0), 0);
+
+            entry.itemSubtotal = (entry.items || []).reduce((sum, item) => {
+                const prod = inventory.find(p => p.id === item.id);
+                const cost = Number(item.unitCost ?? prod?.unitCost) || 0;
+                const stk = Number(item.stock ?? prod?.stock) || 0;
+                return sum + (cost * stk);
+            }, 0);
+
             entry.chargeTotal = entry.charges.reduce((sum, charge) => sum + charge.amount, 0);
             entry.grandTotal = entry.itemSubtotal + entry.chargeTotal;
+
             if (entry.vendor && !vendors.includes(entry.vendor)) vendors.push(entry.vendor);
-            if (oldVendor && !inventoryEntries.some(item => item.vendor === oldVendor) && !inventory.some(item => item.vendor === oldVendor)) vendors = vendors.filter(vendor => vendor !== oldVendor);
+            if (oldVendor && !inventoryEntries.some(item => item.vendor === oldVendor) && !inventory.some(item => item.vendor === oldVendor)) {
+                vendors = vendors.filter(vendor => vendor !== oldVendor);
+            }
+
             saveState();
-            populateInventoryVendors(); populatePurchaseVendorFilter(); renderPurchaseOrders();
+            populateInventoryVendors(); 
+            populatePurchaseVendorFilter(); 
+            renderPurchaseOrders();
+            filterInventory();
             closeModal('purchase-order-edit-modal');
             if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
-            showToast(`Purchase order ${entry.id} updated.`);
+            showToast(`Purchase order ${entry.id} updated successfully.`);
         }
 
         function toggleNewVendorField() {
@@ -1306,6 +1436,53 @@
             document.getElementById('inventory-style-list').appendChild(card);
             refreshInventoryStyleCards();
             updateInventoryEntryTotals();
+        }
+
+        function handleInventoryImageUpload(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const card = input.closest('.inventory-style');
+            const imageField = card.querySelector('[data-field="image"]');
+            const preview = card.querySelector('[data-image-preview]');
+            const status = card.querySelector('[data-image-status]');
+            if (!file.type.startsWith('image/')) {
+                showToast('Choose an image file.');
+                input.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onerror = () => showToast('Could not read that image file.');
+            reader.onload = () => {
+                const source = new Image();
+                source.onerror = () => showToast('Could not open that image file.');
+                source.onload = () => {
+                    let scale = Math.min(1, 600 / source.width, 800 / source.height);
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    let dataUrl = '';
+                    for (let attempt = 0; attempt < 12; attempt++) {
+                        canvas.width = Math.max(1, Math.round(source.width * scale));
+                        canvas.height = Math.max(1, Math.round(source.height * scale));
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+                        const quality = Math.max(0.42, 0.78 - Math.max(0, attempt - 2) * 0.06);
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        if (dataUrl.length <= 45000) break;
+                        if (attempt >= 2) scale *= 0.82;
+                    }
+                    if (dataUrl.length > 45000) {
+                        showToast('This image is too large to fit in a Google Sheets cell. Choose a smaller image.');
+                        input.value = '';
+                        return;
+                    }
+                    imageField.value = dataUrl;
+                    preview.src = dataUrl;
+                    preview.classList.remove('hidden');
+                    status.textContent = 'Photo compressed and ready to save.';
+                };
+                source.src = reader.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function inventorySizeRow(size = '', quantity = 0) {
@@ -1451,47 +1628,22 @@
             }
         }
 
-        // --- PREORDER HANDLER ---
-        function handleAddPreorder(e) {
-            e.preventDefault();
-            const customer = document.getElementById('pre-customer').value.trim();
-            const details = document.getElementById('pre-details').value.trim();
-            const advance = parseFloat(document.getElementById('pre-advance').value) || 0;
-
-            const newPreorder = {
-                id: 'PRE-' + Math.floor(500 + Math.random() * 500),
-                customer,
-                details,
-                advance,
-                date: new Date().toISOString().split('T')[0]
-            };
-
-            preorders.unshift(newPreorder);
-            saveState();
-            renderPreorders();
-            closeModal('add-preorder-modal');
-            document.getElementById('preorder-form').reset();
-            showToast("Preorder request logged successfully!");
-        }
-
         // --- RENDER TABLES & VIEWS ---
         function renderOrdersTable() {
-            const tbody = document.getElementById('orders-table-body');
-            tbody.innerHTML = orders.map(ord => `
-                <tr role="button" tabindex="0" onclick="openOrderDetails('${ord.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${ord.id}')}" aria-label="View details for order ${ord.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition">
-                    <td class="py-3 px-4 font-bold text-sundari-purple">${ord.id}</td>
-                    <td class="py-3 px-4 text-xs text-gray-500">${ord.date}</td>
-                    <td class="py-3 px-4 font-medium">${ord.customer || 'Walk-in Customer'}</td>
-                    <td class="py-3 px-4 text-xs">${ord.customerNumber || '—'}</td>
-                    <td class="py-3 px-4 text-xs max-w-48 truncate" title="${ord.customerAddress || ''}">${ord.customerAddress || '—'}</td>
-                    <td class="py-3 px-4 text-right font-bold text-sundari-goldDark whitespace-nowrap">${formatRupees(Number(ord.total) || 0)}<div class="text-[10px] text-gray-500 font-normal">${ord.paymentType || 'Payment mode not recorded'}${Number(ord.shipping) > 0 ? ` · includes ${formatRupees(Number(ord.shipping))} shipping` : ''}</div></td>
-                    <td class="py-3 px-4 text-center">
-                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
-                            ${ord.status}
-                        </span>
-                    </td>
-                </tr>
-            `).join('');
+            const container = document.getElementById('orders-records-container');
+            if (!container) return;
+            const totalSaleValue = orders.reduce((sum, order) => sum + getOrderRevenue(order), 0);
+            const costs = orders.map(getOrderCostInfo);
+            const allCostsKnown = costs.every(cost => cost.complete);
+            const totalPurchaseValue = allCostsKnown ? costs.reduce((sum, cost) => sum + cost.value, 0) : null;
+            const totalRevenue = totalPurchaseValue === null ? null : totalSaleValue - totalPurchaseValue;
+            document.getElementById('orders-summary-cards').innerHTML = [
+                { label: 'Orders', value: orders.length.toLocaleString('en-IN'), tone: 'text-sundari-purple bg-sundari-purple/5' },
+                { label: 'Sale Value', value: formatRupees(totalSaleValue), tone: 'text-emerald-700 bg-emerald-50' },
+                { label: 'Purchase Value', value: totalPurchaseValue === null ? 'Incomplete cost data' : formatRupees(totalPurchaseValue), tone: 'text-amber-700 bg-amber-50' },
+                { label: 'Revenue', value: totalRevenue === null ? 'Incomplete cost data' : formatRupees(totalRevenue), tone: totalRevenue !== null && totalRevenue < 0 ? 'text-red-700 bg-red-50' : 'text-sundari-purple bg-sundari-purple/5' }
+            ].map(card => `<div class="min-w-0 rounded-xl border border-sundari-gold/20 p-2 sm:p-3 ${card.tone}"><p class="text-[9px] leading-tight sm:text-[11px] font-semibold opacity-75">${card.label}</p><p class="mt-1 text-xs sm:text-lg font-bold break-words">${card.value}</p></div>`).join('');
+            container.innerHTML = renderSalesRevenueTable(orders, true, true);
         }
 
         function getOrderLineItems(order) {
@@ -1514,17 +1666,25 @@
             const itemSubtotal = Number(order.itemsSubtotal ?? (Number(order.total) - (Number(order.shipping) || 0))) || 0;
             const shipping = Number(order.shipping) || 0;
             const discount = Number(order.discount) || 0;
+            const hasShippingDetails = Boolean(order.courierPartner && order.trackingId);
+            const shippingDetails = hasShippingDetails
+                ? `<div class="mt-2 grid grid-cols-2 gap-2"><div class="min-w-0"><p class="font-semibold text-sundari-purple">Courier</p><p class="break-words">${escapeHtml(order.courierPartner)}</p></div><div class="min-w-0"><p class="font-semibold text-sundari-purple">Tracking ID</p><div class="flex items-center gap-1"><span class="min-w-0 break-all text-gray-500">${escapeHtml(order.trackingId)}</span><button type="button" onclick="copyOrderTrackingId('${escapeHtml(order.id)}')" aria-label="Copy tracking ID" title="Copy tracking ID" class="shrink-0 text-sundari-purple hover:text-sundari-goldDark"><i class="fa-regular fa-copy"></i></button></div></div></div>`
+                : `<div class="mt-2 grid grid-cols-2 gap-2"><label class="min-w-0 font-semibold text-sundari-purple">Courier partner<input id="order-courier-partner" value="${escapeHtml(order.courierPartner || '')}" placeholder="Courier company" class="mt-1 w-full min-w-0 p-2 border border-sundari-gold/40 rounded-lg bg-white"></label><label class="min-w-0 font-semibold text-sundari-purple">Tracking ID<input id="order-tracking-id" value="${escapeHtml(order.trackingId || '')}" placeholder="Tracking number" class="mt-1 w-full min-w-0 p-2 border border-sundari-gold/40 rounded-lg bg-white"></label></div><button type="button" onclick="saveOrderShippingDetails('${escapeHtml(order.id)}')" class="mt-2 px-3 py-1.5 rounded-lg bg-sundari-purple text-sundari-gold text-xs font-bold">Save shipping details</button>`;
             document.getElementById('order-detail-title').textContent = order.id;
+            const editButton = document.getElementById('order-detail-edit-button');
+            editButton.textContent = 'Edit Order Details';
+            editButton.onclick = () => startEditOrder(orderId);
             document.getElementById('order-detail-content').innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Customer</p><p>${order.customer || 'Walk-in Customer'}</p><p class="text-gray-500">${order.customerNumber || 'Contact not recorded'}</p>${order.customerAddress ? `<p class="mt-1 text-gray-500">${order.customerAddress}</p>` : ''}</div>
-                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Order</p><p>${order.date || 'Date not recorded'}</p><p class="text-gray-500">${order.paymentType || 'Payment mode not recorded'}</p><p class="text-gray-500">${order.status || 'Completed'}</p></div>
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Customer</p><p>${escapeHtml(order.customer || 'Walk-in Customer')}</p><p class="text-gray-500">${escapeHtml(order.customerNumber || 'Contact not recorded')}</p>${order.customerAddress ? `<p class="mt-1 text-gray-500">${escapeHtml(order.customerAddress)}</p>` : ''}</div>
+                    <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Order</p><p>${escapeHtml(order.date || 'Date not recorded')}</p><p class="text-gray-500">${escapeHtml(order.paymentType || 'Payment mode not recorded')}</p><label class="block mt-2 font-semibold text-sundari-purple">Order status<select onchange="updateOrderStatus('${escapeHtml(order.id)}', this.value)" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg bg-white">${['Confirmed', 'In Transit', 'Delivered'].map(status => `<option value="${status}" ${(getOrderStatusOption(order.status) === status) ? 'selected' : ''}>${status}</option>`).join('')}</select></label></div>
+                    <div class="sm:col-span-2 rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Shipping details</p>${shippingDetails}</div>
                 </div>
                 <div><h4 class="font-bold text-sundari-purple mb-2">Items ordered</h4>
                     <div class="divide-y divide-gray-100 border-y border-gray-100">${lineItems.length ? lineItems.map(item => `
                         <div class="py-3 flex items-center gap-3">
                             <img src="${getEmbeddableImageUrl(item.image || '')}" alt="${item.name}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="https://placehold.co/120x140/3A1032/D4AF37?text=Item" class="w-14 h-16 rounded-lg object-cover bg-sundari-cream border border-sundari-gold/20" onerror="handleProductImageError(this)">
-                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${item.name}</p><p class="text-xs text-gray-500">Size: ${item.size || item.selectedSize || 'Not recorded'} · Qty: ${Number(item.quantity ?? item.qty) || 1}</p><p class="text-[11px] text-gray-500">${formatRupees(Number(item.price) || 0)} each</p></div>
+                            <div class="min-w-0 flex-1"><p class="font-bold text-sm text-sundari-purple">${escapeHtml(item.name)}</p><p class="text-xs text-gray-500">Size: ${escapeHtml(item.size || item.selectedSize || 'Not recorded')} · Qty: ${Number(item.quantity ?? item.qty) || 1}</p><p class="text-[11px] text-gray-500">${formatRupees(Number(item.price) || 0)} each</p></div>
                             <strong class="text-sm text-sundari-goldDark">${formatRupees((Number(item.price) || 0) * (Number(item.quantity ?? item.qty) || 1))}</strong>
                         </div>
                     `).join('') : '<p class="py-4 text-xs text-gray-400">No item details were saved for this order.</p>'}</div>
@@ -1539,31 +1699,111 @@
             openModal('order-detail-modal');
         }
 
-        function renderPreorders() {
-            const container = document.getElementById('preorder-cards');
-            container.innerHTML = preorders.map(pre => `
-                <div class="p-4 bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-sundari-purple">${pre.customer}</span>
-                        <span class="text-[10px] bg-sundari-gold/20 text-sundari-purple font-bold px-2 py-0.5 rounded-full">${pre.id}</span>
+        function startEditOrder(orderId) {
+            const order = orders.find(item => item.id === orderId);
+            if (!order) return;
+            const statuses = ['Confirmed', 'In Transit', 'Delivered'];
+            const editButton = document.getElementById('order-detail-edit-button');
+            editButton.textContent = 'Cancel';
+            editButton.onclick = () => openOrderDetails(orderId);
+            document.getElementById('order-detail-content').innerHTML = `
+                <form onsubmit="saveOrderEdit(event, '${escapeHtml(order.id)}')" class="space-y-3 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="font-semibold text-sundari-purple">Customer name<input id="edit-order-customer" required value="${escapeHtml(order.customer || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple">Phone<input id="edit-order-phone" value="${escapeHtml(order.customerNumber || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple sm:col-span-2">Address<textarea id="edit-order-address" rows="2" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg">${escapeHtml(order.customerAddress || '')}</textarea></label>
+                        <label class="font-semibold text-sundari-purple">Payment method<input id="edit-order-payment" value="${escapeHtml(order.paymentType || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple">Order status<select id="edit-order-status" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg">${statuses.map(status => `<option value="${status}" ${getOrderStatusOption(order.status) === status ? 'selected' : ''}>${status}</option>`).join('')}</select></label>
+                        <label class="font-semibold text-sundari-purple">Shipping charge (₹)<input id="edit-order-shipping" type="number" min="0" step="0.01" value="${Number(order.shipping) || 0}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple">Discount (₹)<input id="edit-order-discount" type="number" min="0" step="0.01" value="${Number(order.discount) || 0}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple">Courier partner<input id="edit-order-courier" value="${escapeHtml(order.courierPartner || '')}" placeholder="Courier company" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
+                        <label class="font-semibold text-sundari-purple">Tracking ID<input id="edit-order-tracking" value="${escapeHtml(order.trackingId || '')}" placeholder="Tracking number" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
                     </div>
-                    <p class="text-xs text-gray-700">${pre.details}</p>
-                    <div class="flex justify-between items-center text-xs pt-2 border-t border-sundari-gold/20">
-                        <span class="text-gray-500">Date: ${pre.date}</span>
-                        <span class="font-bold text-emerald-700">Advance: ₹${pre.advance}</span>
-                    </div>
-                </div>
-            `).join('');
+                    <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="openOrderDetails('${escapeHtml(order.id)}')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 font-semibold">Cancel</button><button type="submit" class="px-4 py-2 bg-sundari-purple text-sundari-gold rounded-lg font-bold">Save changes</button></div>
+                </form>`;
         }
 
-        function filterInventory() {
+        function saveOrderEdit(event, orderId) {
+            event.preventDefault();
+            const order = orders.find(item => item.id === orderId);
+            if (!order) return;
+            const shipping = Math.max(0, Number(document.getElementById('edit-order-shipping').value) || 0);
+            const itemSubtotal = Number(order.itemsSubtotal ?? (Number(order.total) - (Number(order.shipping) || 0) + (Number(order.discount) || 0))) || 0;
+            const discount = Math.min(itemSubtotal, Math.max(0, Number(document.getElementById('edit-order-discount').value) || 0));
+            order.customer = document.getElementById('edit-order-customer').value.trim();
+            order.customerNumber = document.getElementById('edit-order-phone').value.trim();
+            order.customerAddress = document.getElementById('edit-order-address').value.trim();
+            order.paymentType = document.getElementById('edit-order-payment').value.trim();
+            order.status = document.getElementById('edit-order-status').value;
+            order.shipping = shipping;
+            order.discount = discount;
+            order.courierPartner = document.getElementById('edit-order-courier').value.trim();
+            order.trackingId = document.getElementById('edit-order-tracking').value.trim();
+            order.itemsSubtotal = itemSubtotal;
+            order.total = itemSubtotal + shipping - discount;
+            saveState();
+            pushOrderToGoogleSheet(order);
+            openOrderDetails(orderId);
+            showToast('Order details updated.');
+        }
+
+        function getOrderStatusOption(status) {
+            if (status === 'Delivered') return 'Delivered';
+            if (status === 'In Transit' || status === 'Shipped') return 'In Transit';
+            return 'Confirmed';
+        }
+
+        function updateOrderStatus(orderId, status) {
+            const order = orders.find(item => item.id === orderId);
+            if (!order || !['Confirmed', 'In Transit', 'Delivered'].includes(status)) return;
+            order.status = status;
+            saveState();
+            pushOrderToGoogleSheet(order);
+            openOrderDetails(orderId);
+            showToast('Order status updated.');
+        }
+
+        function saveOrderShippingDetails(orderId) {
+            const order = orders.find(item => item.id === orderId);
+            if (!order) return;
+            const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
+            const trackingId = document.getElementById('order-tracking-id')?.value.trim() || '';
+            if (!courierPartner || !trackingId) return showToast('Enter both courier partner and tracking ID.');
+            order.courierPartner = courierPartner;
+            order.trackingId = trackingId;
+            saveState();
+            pushOrderToGoogleSheet(order);
+            openOrderDetails(orderId);
+            showToast('Shipping details saved.');
+        }
+
+        async function copyOrderTrackingId(orderId) {
+            const order = orders.find(item => item.id === orderId);
+            if (!order?.trackingId) return;
+            try {
+                await navigator.clipboard.writeText(order.trackingId);
+            } catch (_) {
+                const field = document.createElement('textarea');
+                field.value = order.trackingId;
+                field.style.position = 'fixed';
+                field.style.opacity = '0';
+                document.body.appendChild(field);
+                field.select();
+                document.execCommand('copy');
+                field.remove();
+            }
+            showToast('Tracking ID copied.');
+        }
+
+        function getFilteredInventory() {
             const query = document.getElementById('search-input').value.toLowerCase();
             const stockFilter = document.getElementById('inventory-stock-filter').value;
             const sizeFilter = document.getElementById('inventory-size-filter').value;
+            const sortFilter = document.getElementById('inventory-sort-filter').value;
             const filtered = inventory.filter(p => {
-                const matchesSearch = p.name.toLowerCase().includes(query) ||
-                    p.id.toLowerCase().includes(query) ||
-                    p.category.toLowerCase().includes(query) ||
+                const matchesSearch = String(p.name || '').toLowerCase().includes(query) ||
+                    String(p.id || '').toLowerCase().includes(query) ||
+                    String(p.category || '').toLowerCase().includes(query) ||
                     (p.sizes || []).some(size => size.toLowerCase().includes(query));
                 const inStock = Number(p.stock) > 0;
                 const matchesStock = stockFilter === 'all' ||
@@ -1572,7 +1812,17 @@
                 const matchesSize = sizeFilter === 'all' || getSizeAvailability(p, sizeFilter).available > 0;
                 return matchesSearch && matchesStock && matchesSize;
             });
+            if (sortFilter === 'price-desc') return filtered.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+            if (sortFilter === 'price-asc') return filtered.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+            const entryDates = new Map(inventoryEntries.map(entry => [entry.id, new Date(entry.date || 0).getTime() || 0]));
+            const dateDirection = sortFilter === 'newest' ? 1 : -1;
+            return filtered.sort((a, b) => dateDirection * ((entryDates.get(b.inventoryEntryId) || 0) - (entryDates.get(a.inventoryEntryId) || 0)));
+        }
+
+        function filterInventory() {
+            const filtered = getFilteredInventory();
             renderInventoryGrid(filtered);
+            updateStats(filtered);
         }
 
         function getOrderRevenue(order) {
@@ -1611,7 +1861,7 @@
             const purchaseTotal = inventoryEntries.reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
             const vendorCreditTotal = inventoryEntries.reduce((sum, entry) => sum + (Number(entry.vendorCredit) || 0), 0);
             const stockUnits = inventory.reduce((sum, product) => sum + (Number(product.stock) || 0), 0);
-            const completedOrders = orders.filter(order => !order.status || order.status.toLowerCase() === 'completed').length;
+            const completedOrders = orders.filter(order => ['completed', 'delivered'].includes(String(order.status || '').toLowerCase())).length;
             const averageOrder = orders.length ? salesRevenue / orders.length : 0;
             const profitLossValue = purchaseTotal - salesRevenue;
             const profitTone = profitLossValue > 0 ? 'text-red-700 bg-red-50' : 'text-emerald-700 bg-emerald-50';
@@ -1637,9 +1887,8 @@
                 .sort((a, b) => a.localeCompare(b));
             document.getElementById('dashboard-vendors').innerHTML = vendorNames.length ? vendorNames.map(vendor => {
                 const billTotal = inventoryEntries.filter(entry => entry.vendor === vendor).reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
-                const credit = getVendorCredit(vendor);
                 return `<button type="button" onclick="openVendorLedger(decodeURIComponent('${encodeURIComponent(vendor).replace(/'/g, '%27')}'))" class="w-full flex items-center justify-between gap-3 p-2.5 text-left rounded-xl hover:bg-sundari-cream/70 transition border-b border-gray-100 last:border-0">
-                    <span class="min-w-0"><span class="block text-xs font-bold text-sundari-purple truncate">${escapeHtml(vendor)}</span><span class="block text-[10px] text-gray-400">${inventoryEntries.filter(entry => entry.vendor === vendor).length} purchase orders${Math.abs(credit) > 0.0001 ? ` · Credit balance ${formatRupees(credit)}` : ''}</span></span>
+                    <span class="min-w-0"><span class="block text-xs font-bold text-sundari-purple truncate">${escapeHtml(vendor)}</span><span class="block text-[10px] text-gray-400">${inventoryEntries.filter(entry => entry.vendor === vendor).length} purchase orders</span></span>
                     <strong class="text-xs text-sundari-goldDark whitespace-nowrap">${formatRupees(billTotal)}</strong>
                 </button>`;
             }).join('') : '<p class="text-xs text-gray-400">No vendors recorded yet.</p>';
@@ -1648,17 +1897,18 @@
             document.getElementById('dashboard-sales').innerHTML = renderSalesRevenueTable(recentSales, false);
         }
 
-        function renderSalesRevenueTable(saleOrders, includeCostDetails = true) {
+        function renderSalesRevenueTable(saleOrders, includeCostDetails = true, includeProductImages = false) {
             if (!saleOrders.length) return '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
-            if (!includeCostDetails) return `<table class="w-full text-left text-xs">
+            if (!includeCostDetails) return `<table class="w-full text-left text-xs min-w-[500px]">
                 <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order ID</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 text-right">Sale value</th></tr></thead>
-                <tbody>${saleOrders.map(order => `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(getOrderRevenue(order))}</td></tr>`).join('')}</tbody></table>`;
-            return `<table class="w-full min-w-[660px] text-left text-xs">
-                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3 text-right">Sale value</th><th class="py-2 pr-3 text-right">Purchase value</th><th class="py-2 text-right">Revenue</th></tr></thead>
+                <tbody>${saleOrders.map(order => `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(getOrderRevenue(order))}</td></tr>`).join('')}</tbody></table>`;
+            return `<table class="w-full text-left text-xs" style="min-width:${includeProductImages ? 740 : 660}px">
+                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th>${includeProductImages ? '<th class="py-2 pr-3">Image</th>' : ''}<th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3 text-right">Sale value</th><th class="py-2 pr-3 text-right">Purchase value</th><th class="py-2 text-right">Revenue</th></tr></thead>
                 <tbody>${saleOrders.map(order => {
                     const cost = getOrderCostInfo(order);
                     const profit = getOrderProfit(order);
-                    return `<tr class="border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${order.id}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${order.customer || 'Walk-in Customer'}</td><td class="py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td><td class="py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
+                    const imageCell = includeProductImages ? `<td class="py-1.5 pr-3"><div class="flex items-center gap-1">${getOrderLineItems(order).slice(0, 3).map(item => `<img src="${getEmbeddableImageUrl(item.image || '')}" alt="${escapeHtml(item.name || 'Product')}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="assets/default.jpeg" loading="lazy" class="h-10 w-8 rounded object-cover border border-sundari-gold/20" onerror="handleProductImageError(this)">`).join('')}${getOrderLineItems(order).length > 3 ? `<span class="text-[10px] text-gray-500">+${getOrderLineItems(order).length - 3}</span>` : ''}</div></td>` : '';
+                    return `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td>${imageCell}<td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td><td class="py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
                 }).join('')}</tbody></table>`;
         }
 
@@ -1676,27 +1926,34 @@
 
         function openVendorLedger(vendor) {
             const vendorEntries = inventoryEntries.filter(entry => entry.vendor === vendor);
-            const billTotal = vendorEntries.reduce((sum, entry) => sum + (Number(entry.grandTotal) || 0), 0);
+            const getShipping = entry => (entry.charges || []).reduce((sum, charge) =>
+                /ship(?:ping)?/i.test(String(charge.description || '')) ? sum + (Number(charge.amount) || 0) : sum, 0);
+            const getLedgerBill = entry => {
+                const charges = (entry.charges || []).reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0);
+                const grandTotal = Number(entry.grandTotal) || (Number(entry.itemSubtotal) || 0) + charges;
+                return Math.max(0, grandTotal - getShipping(entry));
+            };
+            const billTotal = vendorEntries.reduce((sum, entry) => sum + getLedgerBill(entry), 0);
             const creditTotal = getVendorCredit(vendor);
             const events = [];
             vendorEntries.forEach(entry => {
-                events.push({ date: entry.date, type: 'Purchase bill', reference: entry.id, bill: Number(entry.grandTotal) || 0, credit: 0 });
+                events.push({ date: entry.date, type: 'Purchase', reference: entry.id, bill: getLedgerBill(entry), shipping: getShipping(entry), credit: 0 });
                 (entry.returns || []).filter(record => (record.vendor || entry.vendorCreditVendor || entry.vendor) === vendor).forEach(record => {
-                    events.push({ date: record.date || entry.date, type: 'Return credit', reference: `${entry.id} · ${record.name || 'Item'} (${record.size || 'size unavailable'}) × ${Number(record.quantity) || 0}`, bill: 0, credit: Number(record.amount) || 0 });
+                    events.push({ date: record.date || entry.date, type: 'Return', reference: entry.id, bill: 0, shipping: 0, credit: Number(record.amount) || 0 });
                 });
             });
             events.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
             let runningBalance = 0;
             const rows = events.map(event => {
                 runningBalance += event.bill - event.credit;
-                return `<tr class="border-b border-gray-100"><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(event.date)}</td><td class="py-2 pr-3">${escapeHtml(event.type)}</td><td class="py-2 pr-3">${escapeHtml(event.reference)}</td><td class="py-2 pr-3 text-right">${event.bill ? formatRupees(event.bill) : '—'}</td><td class="py-2 pr-3 text-right text-amber-800">${event.credit ? formatRupees(event.credit) : '—'}</td><td class="py-2 text-right font-semibold">${formatRupees(runningBalance)}</td></tr>`;
+                return `<tr class="border-b border-gray-100"><td class="py-2 pr-1 text-gray-500 break-words">${formatDashboardDate(event.date)}</td><td class="py-2 pr-1 break-words">${escapeHtml(event.type)}</td><td class="py-2 pr-1 break-words">${escapeHtml(event.reference)}</td><td class="py-2 pr-1 text-right break-all">${event.bill ? formatRupees(event.bill) : '—'}</td><td class="py-2 pr-1 text-right break-all">${event.shipping ? formatRupees(event.shipping) : '—'}</td><td class="py-2 pr-1 text-right text-amber-800 break-all">${event.credit ? formatRupees(event.credit) : '—'}</td><td class="py-2 text-right font-semibold break-all">${formatRupees(runningBalance)}</td></tr>`;
             }).join('');
             document.getElementById('vendor-ledger-title').textContent = vendor;
             document.getElementById('vendor-ledger-content').innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-xs">
                 <div class="rounded-xl bg-sundari-cream/60 p-3"><span class="text-gray-500">Total bills</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(billTotal)}</strong></div>
                 <div class="rounded-xl bg-amber-50 p-3"><span class="text-amber-800">Credit balance</span><strong class="block text-amber-900 text-base mt-1">${formatRupees(creditTotal)}</strong></div>
                 <div class="rounded-xl bg-sundari-purple/5 p-3"><span class="text-gray-500">Balance after credit</span><strong class="block text-sundari-purple text-base mt-1">${formatRupees(billTotal - creditTotal)}</strong></div>
-            </div><div class="overflow-x-auto"><table class="w-full min-w-[680px] text-left text-xs"><thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Entry</th><th class="py-2 pr-3">Reference</th><th class="py-2 pr-3 text-right">Bill</th><th class="py-2 pr-3 text-right">Credit</th><th class="py-2 text-right">Balance</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="py-4 text-center text-gray-400">No ledger entries recorded for this vendor.</td></tr>'}</tbody></table></div>`;
+            </div><div class="w-full overflow-hidden"><table class="w-full table-fixed text-left text-[9px] sm:text-xs"><colgroup><col style="width:13%"><col style="width:13%"><col style="width:25%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:13%"></colgroup><thead><tr class="text-[8px] sm:text-[10px] uppercase tracking-tight sm:tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-1">Date</th><th class="py-2 pr-1">Entry</th><th class="py-2 pr-1">Reference</th><th class="py-2 pr-1 text-right">Bill</th><th class="py-2 pr-1 text-right">Shipping</th><th class="py-2 pr-1 text-right">Credit</th><th class="py-2 text-right">Balance</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="py-4 text-center text-gray-400">No ledger entries recorded for this vendor.</td></tr>'}</tbody></table></div>`;
             openModal('vendor-ledger-modal');
         }
 
@@ -1706,9 +1963,14 @@
             return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
-        function updateStats() {
-            document.getElementById('stat-total-stock').innerText = inventory.length;
-            const totalQty = inventory.reduce((sum, item) => sum + item.stock, 0);
+        function updateStats(filtered = getFilteredInventory()) {
+            const sizeFilter = document.getElementById('inventory-size-filter').value;
+            document.getElementById('stat-total-stock').innerText = filtered.length;
+            const totalQty = filtered.reduce((sum, item) => {
+                if (sizeFilter === 'all') return sum + (Number(item.stock) || 0);
+                const tracked = item.sizeQuantities && Object.prototype.hasOwnProperty.call(item.sizeQuantities, sizeFilter);
+                return sum + (tracked ? Math.max(0, Number(item.sizeQuantities[sizeFilter]) || 0) : (Number(item.stock) || 0));
+            }, 0);
             document.getElementById('stat-total-qty').innerText = totalQty;
         }
 
@@ -1718,11 +1980,11 @@
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-purchase-orders').classList.add('hidden');
             document.getElementById('view-orders').classList.add('hidden');
-            document.getElementById('view-preorders').classList.add('hidden');
 
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
             document.getElementById('inventory-toolbar').classList.toggle('hidden', viewName !== 'inventory');
             if (viewName === 'dashboard') renderDashboard();
+            if (viewName === 'orders') renderOrdersTable();
             if (viewName === 'purchase-orders') {
                 populatePurchaseVendorFilter();
                 renderPurchaseOrders();
@@ -1751,7 +2013,7 @@
                 openModal('settings-modal');
                 return;
             }
-            const confirmed = window.confirm('Clear all SUNDARI inventory, vendor entries, sales orders, cart, and preorders from this browser and the connected Google Sheet? Sheet tabs and headers will remain. This cannot be undone.');
+            const confirmed = window.confirm('Clear all SUNDARI inventory, vendor entries, sales orders, and cart from this browser and the connected Google Sheet? Sheet tabs and headers will remain. This cannot be undone.');
             if (!confirmed) return;
             fetch(googleSheetEndpoint, {
                 method: 'POST',
@@ -1871,6 +2133,14 @@
             const statusUrl = new URL(endpoint);
             statusUrl.searchParams.set('check', '1');
             window.open(statusUrl.toString(), '_blank', 'noopener');
+        }
+
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(error => {
+                    console.error('SUNDARI service worker registration failed:', error);
+                });
+            });
         }
     </script>
 </body>
