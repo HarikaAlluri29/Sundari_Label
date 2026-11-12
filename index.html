@@ -134,7 +134,6 @@
             box-shadow: inset 0 -2px 0 #D4AF37;
         }
         #app-header { touch-action: pan-y; }
-        #instagram-qr-button { touch-action: pan-y; }
         .mobile-menu-trigger-visible {
             position: static !important;
             width: auto !important;
@@ -555,7 +554,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block font-semibold text-sundari-purple mb-1">Vendor *</label>
-                        <select id="inv-vendor" required onchange="toggleNewVendorField()" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
+                        <select id="inv-vendor" onchange="toggleNewVendorField()" class="w-full p-2 bg-sundari-cream/50 border border-sundari-gold/40 rounded-xl text-sm">
                             <option value="">Select a vendor</option>
                             <option value="__new__">+ Add a new vendor</option>
                         </select>
@@ -594,7 +593,7 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-1.5">
-                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Unit Cost (₹) *</label><input type="number" data-field="unitCost" required min="0.01" step="0.01" placeholder="450" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
+                            <div><label class="block font-semibold text-sundari-purple mb-0.5">Unit Cost (₹) (optional)</label><input type="number" data-field="unitCost" min="0" step="0.01" placeholder="450" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
                             <div><label class="block font-semibold text-sundari-purple mb-0.5">Selling Price (₹) *</label><input type="number" data-field="price" required min="0.01" step="0.01" placeholder="799" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
                         </div>
                         <div>
@@ -940,7 +939,7 @@
                     name: product.name,
                     image: getEmbeddableImageUrl(product.image),
                     price: product.price,
-                    unitCost: Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null,
+                    unitCost: product.unitCost !== null && product.unitCost !== undefined && product.unitCost !== '' && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null,
                     selectedSize,
                     qty: 1,
                     maxStock: availability.capacity
@@ -1067,9 +1066,11 @@
                 items: cart.map(i => `${i.name} (${i.selectedSize}) x ${i.qty}`).join(', '),
                 lineItems: cart.map(item => {
                     const inventoryProduct = inventory.find(product => product.id === item.id);
-                    const unitCost = item.unitCost !== undefined && item.unitCost !== null
-                        ? Number(item.unitCost)
-                        : Number(inventoryProduct?.unitCost);
+                    const unitCost = item.unitCost === null
+                        ? null
+                        : (item.unitCost !== undefined
+                            ? Number(item.unitCost)
+                            : (inventoryProduct && inventoryProduct.unitCost !== null && inventoryProduct.unitCost !== undefined && inventoryProduct.unitCost !== '' ? Number(inventoryProduct.unitCost) : null));
                     return {
                         id: item.id,
                         name: item.name,
@@ -1620,8 +1621,9 @@
                     quantity: Math.max(0, parseInt(row.querySelector('.size-qty').value, 10) || 0)
                 })).filter(row => row.size);
                 const stock = sizes.reduce((sum, row) => sum + row.quantity, 0);
-                const unitCost = parseFloat(card.querySelector('[data-field="unitCost"]').value) || 0;
-                return { card, name: card.querySelector('[data-field="name"]').value.trim(), image: card.querySelector('[data-field="image"]').value.trim(), unitCost, price: parseFloat(card.querySelector('[data-field="price"]').value) || 0, sizes, stock, itemTotal: unitCost * stock };
+                const unitCostInput = card.querySelector('[data-field="unitCost"]').value.trim();
+                const unitCost = unitCostInput === '' ? null : (parseFloat(unitCostInput) || 0);
+                return { card, name: card.querySelector('[data-field="name"]').value.trim(), image: card.querySelector('[data-field="image"]').value.trim(), unitCost, price: parseFloat(card.querySelector('[data-field="price"]').value) || 0, sizes, stock, itemTotal: (unitCost || 0) * stock };
             });
             const charges = [...document.querySelectorAll('#inventory-charge-list .inventory-charge-row')].map(row => ({
                 description: row.querySelector('.charge-description').value.trim() || 'Additional charge',
@@ -1656,12 +1658,11 @@
             const vendor = selectedVendor === '__new__' ? document.getElementById('inv-new-vendor').value.trim() : selectedVendor;
             const purchaseDate = document.getElementById('inv-purchase-date').value;
             const draft = getInventoryEntryDraft();
-            if (!vendor) return showToast('Select or enter a vendor.');
             if (!purchaseDate) return showToast('Select a purchase date.');
             if (draft.styles.some(style => !style.stock)) return showToast('Enter at least one unit for every style.');
             if (draft.charges.some(charge => charge.amount > 0 && charge.description === 'Additional charge')) return showToast('Add a description for each additional charge.');
 
-            if (!vendors.some(existing => existing.toLowerCase() === vendor.toLowerCase())) vendors.push(vendor);
+            if (vendor && !vendors.some(existing => existing.toLowerCase() === vendor.toLowerCase())) vendors.push(vendor);
             const entryId = nextSequentialId('PO', inventoryEntries);
             const newProducts = draft.styles.map((style, index) => {
                 const sizeQuantities = Object.fromEntries(style.sizes.map(row => [row.size, row.quantity]));
@@ -1732,7 +1733,8 @@
                 if (!match) return null;
                 const [, name, size, quantityText] = match;
                 const product = inventory.find(item => item.name === name);
-                return { id: product?.id, name, image: product?.image || '', size, quantity: Number(quantityText), price: Number(product?.price) || 0, unitCost: Number.isFinite(Number(product?.unitCost)) ? Number(product.unitCost) : null };
+                const unitCost = product && product.unitCost !== null && product.unitCost !== undefined && product.unitCost !== '' && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null;
+                return { id: product?.id, name, image: product?.image || '', size, quantity: Number(quantityText), price: Number(product?.price) || 0, unitCost };
             }).filter(Boolean);
             return parsed.length ? parsed : (order.items ? [{ name: order.items, image: '', size: 'Not recorded', quantity: 1, price: Number(order.itemsSubtotal ?? order.total) || 0, unitCost: null }] : []);
         }
@@ -2111,7 +2113,7 @@
                     ? null
                     : (item.unitCost !== undefined && Number.isFinite(Number(item.unitCost))
                         ? Number(item.unitCost)
-                        : (product && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null));
+                        : (product && product.unitCost !== null && product.unitCost !== undefined && product.unitCost !== '' && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null));
                 if (unitCost === null) complete = false;
                 else value += unitCost * quantity;
             });
@@ -2290,28 +2292,29 @@
             setTimeout(() => menu.classList.remove('opacity-0', 'scale-95'), 10);
         }
 
-        const instagramQrButton = document.getElementById('instagram-qr-button');
-        let instagramSwipeStart = null;
-        let suppressInstagramClick = false;
-        instagramQrButton.addEventListener('touchstart', event => {
+        const appHeader = document.getElementById('app-header');
+        let headerSwipeStart = null;
+        appHeader.addEventListener('touchstart', event => {
             const mobileMenu = document.getElementById('mobile-header-menu');
             if (getComputedStyle(mobileMenu).display === 'none') return;
             const touch = event.changedTouches[0];
-            instagramSwipeStart = { x: touch.clientX, y: touch.clientY };
+            const bounds = appHeader.getBoundingClientRect();
+            if (touch.clientY >= bounds.top && touch.clientY <= bounds.bottom) {
+                headerSwipeStart = { x: touch.clientX, y: touch.clientY };
+            }
         }, { passive: true });
-        instagramQrButton.addEventListener('touchend', event => {
-            if (!instagramSwipeStart) return;
+        appHeader.addEventListener('touchend', event => {
+            if (!headerSwipeStart) return;
             const touch = event.changedTouches[0];
-            const swipeX = touch.clientX - instagramSwipeStart.x;
-            const swipeY = touch.clientY - instagramSwipeStart.y;
-            instagramSwipeStart = null;
-            if (swipeX >= -35 || Math.abs(swipeY) > 35) return;
-            revealMobileMenuButton();
-            suppressInstagramClick = true;
-            setTimeout(() => { suppressInstagramClick = false; }, 500);
+            const swipeX = touch.clientX - headerSwipeStart.x;
+            const swipeY = touch.clientY - headerSwipeStart.y;
+            headerSwipeStart = null;
+            if (Math.abs(swipeX) < 50 || Math.abs(swipeY) > 40) return;
+            if (swipeX < 0) revealMobileMenuButton();
+            else hideMobileMenuButton();
             event.preventDefault();
         }, { passive: false });
-        instagramQrButton.addEventListener('touchcancel', () => { instagramSwipeStart = null; }, { passive: true });
+        appHeader.addEventListener('touchcancel', () => { headerSwipeStart = null; }, { passive: true });
 
         function revealMobileMenuButton() {
             const button = document.getElementById('menu-btn');
@@ -2320,11 +2323,16 @@
             document.getElementById('mobile-header-menu').classList.remove('w-0');
         }
 
+        function hideMobileMenuButton() {
+            const button = document.getElementById('menu-btn');
+            const menu = document.getElementById('dropdown-menu');
+            menu.classList.add('hidden', 'opacity-0', 'scale-95');
+            button.classList.add('sr-only');
+            button.classList.remove('mobile-menu-trigger-visible');
+            document.getElementById('mobile-header-menu').classList.add('w-0');
+        }
+
         function handleInstagramButtonClick() {
-            if (suppressInstagramClick) {
-                suppressInstagramClick = false;
-                return;
-            }
             openModal('instagram-qr-modal');
         }
 
