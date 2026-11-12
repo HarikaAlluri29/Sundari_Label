@@ -121,6 +121,31 @@
             animation: sundari-spin 850ms linear infinite;
         }
         @keyframes sundari-spin { to { transform: rotate(360deg); } }
+        @media (display-mode: standalone) {
+            #desktop-header-menu { display: none !important; }
+            #mobile-header-menu { display: block !important; }
+        }
+        .nav-link-active {
+            background-color: rgba(212, 175, 55, 0.2) !important;
+            color: #260A21 !important;
+            font-weight: 700 !important;
+        }
+        #desktop-header-menu .nav-link-active {
+            box-shadow: inset 0 -2px 0 #D4AF37;
+        }
+        #app-header { touch-action: pan-y; }
+        @media (max-width: 639px) {
+            .orders-list-table {
+                width: 100%;
+                min-width: 0 !important;
+                table-layout: fixed;
+                font-size: 10px;
+            }
+            .orders-list-table .order-col-id { width: 18%; }
+            .orders-list-table .order-col-image { width: 18%; }
+            .orders-list-table .order-col-status { width: 36%; }
+            .orders-list-table .order-col-revenue { width: 28%; }
+        }
     </style>
 </head>
 <body class="bg-textured min-h-screen flex flex-col justify-between select-none">
@@ -136,7 +161,7 @@
     </div>
 
     <!-- APP HEADER -->
-    <header class="sticky top-0 z-40 app-header border-b border-sundari-gold/30 px-2 py-1 custom-shadow h-16 flex items-center">
+    <header id="app-header" class="sticky top-0 z-40 app-header border-b border-sundari-gold/30 px-2 py-1 custom-shadow h-16 flex items-center">
         <div class="max-w-7xl mx-auto flex items-center justify-between w-full h-full">
             <!-- Brand Logo Image Only (Left Aligned & Maximized in Compact Header) -->
             <div class="cursor-pointer flex items-center h-full" onclick="switchView('inventory')">
@@ -151,23 +176,30 @@
                 <button type="button" onclick="openModal('instagram-qr-modal')" aria-label="Show SUNDARI Instagram QR code" title="Instagram QR code" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
-            <div class="relative">
-                <button id="menu-btn" onclick="toggleMenu()" class="p-1.5 rounded-xl text-sundari-purple hover:bg-sundari-gold/10 transition-colors focus:outline-none" aria-label="Toggle Navigation Menu">
+                <nav id="desktop-header-menu" aria-label="Main navigation" class="hidden lg:flex items-center gap-1">
+                    <a href="#" data-nav-view="inventory" onclick="switchView('inventory'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Home</a>
+                    <a href="#" data-nav-view="dashboard" onclick="switchView('dashboard'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Dashboard</a>
+                    <a href="#" data-nav-view="purchase-orders" onclick="switchView('purchase-orders'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Inventory</a>
+                    <a href="#" data-nav-view="orders" onclick="switchView('orders'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Orders</a>
+                    <a href="#" onclick="openModal('settings-modal'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-sundari-gold/10 transition">Settings</a>
+                </nav>
+            <div id="mobile-header-menu" class="relative h-full w-0 lg:hidden">
+                <button id="menu-btn" onclick="toggleMenu()" class="sr-only" aria-label="Open navigation menu">
                     <i class="fa-solid fa-bars text-2xl"></i>
                 </button>
 
                 <!-- Dropdown Menu -->
-                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-sundari-gold/30 py-2 z-50 transform opacity-0 scale-95 transition-all duration-200">
-                    <a href="#" onclick="switchView('inventory'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                <div id="dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-sundari-gold/30 py-2 z-50 transform opacity-0 scale-95 transition-all duration-200">
+                    <a href="#" data-nav-view="inventory" onclick="switchView('inventory'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-house w-6 text-sundari-gold"></i> Home
                     </a>
-                    <a href="#" onclick="switchView('dashboard'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                    <a href="#" data-nav-view="dashboard" onclick="switchView('dashboard'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-chart-pie w-6 text-sundari-gold"></i> Dashboard
                     </a>
-                    <a href="#" onclick="switchView('purchase-orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                    <a href="#" data-nav-view="purchase-orders" onclick="switchView('purchase-orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-boxes-stacked w-6 text-sundari-gold"></i> Inventory
                     </a>
-                    <a href="#" onclick="switchView('orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
+                    <a href="#" data-nav-view="orders" onclick="switchView('orders'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-receipt w-6 text-sundari-gold"></i> Orders
                     </a>
                     <div class="border-t border-gray-100 my-1"></div>
@@ -681,6 +713,7 @@
                 renderOrdersTable();
                 renderPurchaseOrders();
                 updateStats();
+                setActiveNavigation('inventory');
                 if (googleSheetEndpoint) {
                     document.getElementById('google-sheet-url').value = googleSheetEndpoint;
                 }
@@ -1673,7 +1706,7 @@
                 { label: 'Purchase Value', value: totalPurchaseValue === null ? 'Incomplete cost data' : formatRupees(totalPurchaseValue), tone: 'text-amber-700 bg-amber-50' },
                 { label: 'Revenue', value: totalRevenue === null ? 'Incomplete cost data' : formatRupees(totalRevenue), tone: totalRevenue !== null && totalRevenue < 0 ? 'text-red-700 bg-red-50' : 'text-sundari-purple bg-sundari-purple/5' }
             ].map(card => `<div class="min-w-0 rounded-xl border border-sundari-gold/20 p-2 sm:p-3 ${card.tone}"><p class="text-[9px] leading-tight sm:text-[11px] font-semibold opacity-75">${card.label}</p><p class="mt-1 text-xs sm:text-lg font-bold break-words">${card.value}</p></div>`).join('');
-            container.innerHTML = renderSalesRevenueTable(orders, true, true);
+            container.innerHTML = renderSalesRevenueTable(orders, true, true, true);
         }
 
         function getOrderLineItems(order) {
@@ -1972,13 +2005,13 @@
             return 'Confirmed';
         }
 
-        function updateOrderStatus(orderId, status) {
+        function updateOrderStatus(orderId, status, fromList = false) {
             const order = orders.find(item => item.id === orderId);
             if (!order || !['Confirmed', 'In Transit', 'Delivered'].includes(status)) return;
             order.status = status;
             saveState();
             pushOrderToGoogleSheet(order);
-            openOrderDetails(orderId);
+            if (!fromList) openOrderDetails(orderId);
             showToast('Order status updated.');
         }
 
@@ -2116,18 +2149,20 @@
             document.getElementById('dashboard-sales').innerHTML = renderSalesRevenueTable(recentSales, false);
         }
 
-        function renderSalesRevenueTable(saleOrders, includeCostDetails = true, includeProductImages = false) {
+        function renderSalesRevenueTable(saleOrders, includeCostDetails = true, includeProductImages = false, isOrdersList = false) {
             if (!saleOrders.length) return '<p class="text-xs text-gray-400">No sales recorded yet.</p>';
             if (!includeCostDetails) return `<table class="w-full text-left text-xs min-w-[500px]">
                 <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order ID</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 text-right">Sale value</th></tr></thead>
                 <tbody>${saleOrders.map(order => `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(getOrderRevenue(order))}</td></tr>`).join('')}</tbody></table>`;
-            return `<table class="w-full text-left text-xs" style="min-width:${includeProductImages ? 740 : 660}px">
-                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order</th>${includeProductImages ? '<th class="py-2 pr-3">Image</th>' : ''}<th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3 text-right">Sale value</th><th class="py-2 pr-3 text-right">Purchase value</th><th class="py-2 text-right">Revenue</th></tr></thead>
+            return `<table class="w-full text-left text-xs ${isOrdersList ? 'orders-list-table' : ''}" style="min-width:${isOrdersList ? 0 : includeProductImages ? 740 : 660}px">
+                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="order-col-id py-2 pr-1 sm:pr-3">Order</th>${includeProductImages ? '<th class="order-col-image py-2 pr-1 sm:pr-3">Image</th>' : ''}<th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">Date</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">Customer</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Sale value</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Purchase value</th>${isOrdersList ? '<th class="order-col-status py-2 pr-1 text-center">Status</th>' : ''}<th class="order-col-revenue py-2 text-right">Revenue</th></tr></thead>
                 <tbody>${saleOrders.map(order => {
                     const cost = getOrderCostInfo(order);
                     const profit = getOrderProfit(order);
-                    const imageCell = includeProductImages ? `<td class="py-1.5 pr-3"><div class="flex items-center gap-1">${getOrderLineItems(order).slice(0, 3).map(item => `<img src="${getEmbeddableImageUrl(item.image || '')}" alt="${escapeHtml(item.name || 'Product')}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="assets/default.jpeg" loading="lazy" class="h-10 w-8 rounded object-cover border border-sundari-gold/20" onerror="handleProductImageError(this)">`).join('')}${getOrderLineItems(order).length > 3 ? `<span class="text-[10px] text-gray-500">+${getOrderLineItems(order).length - 3}</span>` : ''}</div></td>` : '';
-                    return `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td>${imageCell}<td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td><td class="py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
+                    const orderLines = getOrderLineItems(order);
+                    const imageCell = includeProductImages ? `<td class="order-col-image py-1.5 pr-1 sm:pr-3"><div class="flex items-center gap-1">${orderLines.slice(0, 3).map((item, index) => `<img src="${getEmbeddableImageUrl(item.image || '')}" alt="${escapeHtml(item.name || 'Product')}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="assets/default.jpeg" loading="lazy" class="${index ? 'hidden sm:block' : ''} h-10 w-8 rounded object-cover border border-sundari-gold/20" onerror="handleProductImageError(this)">`).join('')}${orderLines.length > 3 ? `<span class="hidden sm:inline text-[10px] text-gray-500">+${orderLines.length - 3}</span>` : ''}</div></td>` : '';
+                    const statusCell = isOrdersList ? `<td class="order-col-status py-1 pr-1 text-center" onclick="event.stopPropagation()"><select aria-label="Status for order ${escapeHtml(order.id)}" onchange="updateOrderStatus('${escapeHtml(order.id)}', this.value, true)" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" class="w-full min-w-0 rounded-md border border-sundari-gold/30 bg-white px-1 py-1 text-[9px] sm:text-xs text-sundari-purple">${['Confirmed', 'In Transit', 'Delivered'].map(status => `<option value="${status}" ${getOrderStatusOption(order.status) === status ? 'selected' : ''}>${status}</option>`).join('')}</select></td>` : '';
+                    return `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${escapeHtml(order.id)}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="order-col-id py-2 pr-1 sm:pr-3 font-bold text-sundari-purple break-all">${escapeHtml(order.id)}</td>${imageCell}<td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td>${statusCell}<td class="order-col-revenue py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
                 }).join('')}</tbody></table>`;
         }
 
@@ -2202,6 +2237,7 @@
 
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
             document.getElementById('inventory-toolbar').classList.toggle('hidden', viewName !== 'inventory');
+            setActiveNavigation(viewName);
             if (viewName === 'dashboard') renderDashboard();
             if (viewName === 'orders') renderOrdersTable();
             if (viewName === 'purchase-orders') {
@@ -2211,13 +2247,19 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        function setActiveNavigation(viewName) {
+            document.querySelectorAll('[data-nav-view]').forEach(link => {
+                const isActive = link.dataset.navView === viewName;
+                link.classList.toggle('nav-link-active', isActive);
+                if (isActive) link.setAttribute('aria-current', 'page');
+                else link.removeAttribute('aria-current');
+            });
+        }
+
         function toggleMenu() {
             const menu = document.getElementById('dropdown-menu');
             if (menu.classList.contains('hidden')) {
-                menu.classList.remove('hidden');
-                setTimeout(() => {
-                    menu.classList.remove('opacity-0', 'scale-95');
-                }, 10);
+                openMenu();
             } else {
                 menu.classList.add('opacity-0', 'scale-95');
                 setTimeout(() => {
@@ -2225,6 +2267,36 @@
                 }, 200);
             }
         }
+
+        function openMenu() {
+            const menu = document.getElementById('dropdown-menu');
+            if (!menu || !menu.classList.contains('hidden')) return;
+            menu.classList.remove('hidden');
+            setTimeout(() => menu.classList.remove('opacity-0', 'scale-95'), 10);
+        }
+
+        const appHeader = document.getElementById('app-header');
+        let headerSwipeStart = null;
+        appHeader.addEventListener('touchstart', event => {
+            const mobileMenu = document.getElementById('mobile-header-menu');
+            if (getComputedStyle(mobileMenu).display === 'none') return;
+            const touch = event.changedTouches[0];
+            const bounds = appHeader.getBoundingClientRect();
+            if (touch.clientX >= window.innerWidth - 64 && touch.clientY >= bounds.top && touch.clientY <= bounds.bottom) {
+                headerSwipeStart = { x: touch.clientX, y: touch.clientY };
+            } else {
+                headerSwipeStart = null;
+            }
+        }, { passive: true });
+        appHeader.addEventListener('touchend', event => {
+            if (!headerSwipeStart) return;
+            const touch = event.changedTouches[0];
+            const swipeX = touch.clientX - headerSwipeStart.x;
+            const swipeY = touch.clientY - headerSwipeStart.y;
+            headerSwipeStart = null;
+            if (swipeX <= -55 && Math.abs(swipeY) < 40) openMenu();
+        }, { passive: true });
+        appHeader.addEventListener('touchcancel', () => { headerSwipeStart = null; }, { passive: true });
 
         function resetApplication() {
             if (!googleSheetEndpoint) {
