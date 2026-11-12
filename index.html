@@ -134,6 +134,21 @@
             box-shadow: inset 0 -2px 0 #D4AF37;
         }
         #app-header { touch-action: pan-y; }
+        #instagram-qr-button { touch-action: pan-y; }
+        .mobile-menu-trigger-visible {
+            position: static !important;
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            clip: auto !important;
+            clip-path: none !important;
+            white-space: normal !important;
+            padding: 0.375rem !important;
+            border-radius: 0.75rem;
+            color: #3A1032;
+        }
+        .mobile-menu-trigger-visible:hover { background-color: rgba(212, 175, 55, 0.1); }
         @media (max-width: 639px) {
             .orders-list-table {
                 width: 100%;
@@ -172,8 +187,8 @@
             </div>
 
             <!-- Header Right Menu -->
-            <div class="flex items-center gap-3">
-                <button type="button" onclick="openModal('instagram-qr-modal')" aria-label="Show SUNDARI Instagram QR code" title="Instagram QR code" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
+            <div class="flex items-center gap-2">
+                <button id="instagram-qr-button" type="button" onclick="handleInstagramButtonClick()" aria-label="Show SUNDARI Instagram QR code. Swipe left to reveal the navigation menu." title="Instagram QR code · Swipe left to reveal menu" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
                 <nav id="desktop-header-menu" aria-label="Main navigation" class="hidden lg:flex items-center gap-1">
@@ -184,7 +199,7 @@
                     <a href="#" onclick="openModal('settings-modal'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 hover:bg-sundari-gold/10 transition">Settings</a>
                 </nav>
             <div id="mobile-header-menu" class="relative h-full w-0 lg:hidden">
-                <button id="menu-btn" onclick="toggleMenu()" class="sr-only" aria-label="Open navigation menu">
+                <button id="menu-btn" onclick="toggleMenu()" class="sr-only focus:not-sr-only focus:absolute focus:right-2 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-white focus:p-2" aria-label="Open navigation menu">
                     <i class="fa-solid fa-bars text-2xl"></i>
                 </button>
 
@@ -2275,28 +2290,43 @@
             setTimeout(() => menu.classList.remove('opacity-0', 'scale-95'), 10);
         }
 
-        const appHeader = document.getElementById('app-header');
-        let headerSwipeStart = null;
-        appHeader.addEventListener('touchstart', event => {
+        const instagramQrButton = document.getElementById('instagram-qr-button');
+        let instagramSwipeStart = null;
+        let suppressInstagramClick = false;
+        instagramQrButton.addEventListener('touchstart', event => {
             const mobileMenu = document.getElementById('mobile-header-menu');
             if (getComputedStyle(mobileMenu).display === 'none') return;
             const touch = event.changedTouches[0];
-            const bounds = appHeader.getBoundingClientRect();
-            if (touch.clientX >= window.innerWidth - 64 && touch.clientY >= bounds.top && touch.clientY <= bounds.bottom) {
-                headerSwipeStart = { x: touch.clientX, y: touch.clientY };
-            } else {
-                headerSwipeStart = null;
-            }
+            instagramSwipeStart = { x: touch.clientX, y: touch.clientY };
         }, { passive: true });
-        appHeader.addEventListener('touchend', event => {
-            if (!headerSwipeStart) return;
+        instagramQrButton.addEventListener('touchend', event => {
+            if (!instagramSwipeStart) return;
             const touch = event.changedTouches[0];
-            const swipeX = touch.clientX - headerSwipeStart.x;
-            const swipeY = touch.clientY - headerSwipeStart.y;
-            headerSwipeStart = null;
-            if (swipeX <= -55 && Math.abs(swipeY) < 40) openMenu();
-        }, { passive: true });
-        appHeader.addEventListener('touchcancel', () => { headerSwipeStart = null; }, { passive: true });
+            const swipeX = touch.clientX - instagramSwipeStart.x;
+            const swipeY = touch.clientY - instagramSwipeStart.y;
+            instagramSwipeStart = null;
+            if (swipeX >= -35 || Math.abs(swipeY) > 35) return;
+            revealMobileMenuButton();
+            suppressInstagramClick = true;
+            setTimeout(() => { suppressInstagramClick = false; }, 500);
+            event.preventDefault();
+        }, { passive: false });
+        instagramQrButton.addEventListener('touchcancel', () => { instagramSwipeStart = null; }, { passive: true });
+
+        function revealMobileMenuButton() {
+            const button = document.getElementById('menu-btn');
+            button.classList.remove('sr-only');
+            button.classList.add('mobile-menu-trigger-visible');
+            document.getElementById('mobile-header-menu').classList.remove('w-0');
+        }
+
+        function handleInstagramButtonClick() {
+            if (suppressInstagramClick) {
+                suppressInstagramClick = false;
+                return;
+            }
+            openModal('instagram-qr-modal');
+        }
 
         function resetApplication() {
             if (!googleSheetEndpoint) {
