@@ -354,7 +354,9 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm border-collapse min-w-[680px]">
                         <thead><tr class="bg-sundari-cream text-sundari-purple font-semibold text-xs uppercase tracking-wider border-b border-sundari-gold/20">
-                            <th class="py-3 px-3">Purchase ID</th><th class="py-3 px-3">Date</th><th class="py-3 px-3">Vendor</th><th class="py-3 px-3">Styles</th><th class="py-3 px-3 text-right">Total (₹)</th>
+                            <th id="purchase-id-header" aria-sort="none" class="py-3 px-3"><button type="button" onclick="sortPurchaseOrders('id')" class="inline-flex items-center gap-1.5 hover:text-sundari-goldDark">Purchase ID<i id="purchase-id-sort-icon" class="fa-solid fa-sort text-gray-400"></i></button></th>
+                            <th id="purchase-date-header" aria-sort="descending" class="py-3 px-3"><button type="button" onclick="sortPurchaseOrders('date')" class="inline-flex items-center gap-1.5 hover:text-sundari-goldDark">Date<i id="purchase-date-sort-icon" class="fa-solid fa-sort-down text-sundari-goldDark"></i></button></th>
+                            <th class="py-3 px-3">Vendor</th><th class="py-3 px-3">Styles</th><th class="py-3 px-3 text-right">Total (₹)</th>
                         </tr></thead>
                         <tbody id="purchase-orders-table-body" class="divide-y divide-gray-100 text-gray-700"></tbody>
                     </table>
@@ -483,7 +485,7 @@
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
-                <div class="flex items-center gap-3"><button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button><button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+                <div class="flex items-center gap-2"><button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button><button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button><button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
             </div>
             <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
         </div>
@@ -691,6 +693,7 @@
         let inventory = JSON.parse(localStorage.getItem('sundari_inventory')) || initialProducts;
         let vendors = JSON.parse(localStorage.getItem('sundari_vendors')) || [];
         let inventoryEntries = JSON.parse(localStorage.getItem('sundari_inventory_entries')) || [];
+        let purchaseOrderSort = { key: 'date', direction: 'desc' };
         let cart = JSON.parse(localStorage.getItem('sundari_cart')) || [];
         let orders = JSON.parse(localStorage.getItem('sundari_orders')) || [];
         let orderEditDraftOrderId = '';
@@ -1134,6 +1137,26 @@
             select.value = availableVendors.includes(selectedVendor) ? selectedVendor : 'all';
         }
 
+        function sortPurchaseOrders(key) {
+            if (purchaseOrderSort.key === key) {
+                purchaseOrderSort.direction = purchaseOrderSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                purchaseOrderSort = { key, direction: 'asc' };
+            }
+            renderPurchaseOrders();
+        }
+
+        function updatePurchaseOrderSortIndicators() {
+            ['id', 'date'].forEach(key => {
+                const icon = document.getElementById(`purchase-${key}-sort-icon`);
+                const header = document.getElementById(`purchase-${key}-header`);
+                if (!icon || !header) return;
+                const active = purchaseOrderSort.key === key;
+                icon.className = `fa-solid ${active ? (purchaseOrderSort.direction === 'asc' ? 'fa-sort-up text-sundari-goldDark' : 'fa-sort-down text-sundari-goldDark') : 'fa-sort text-gray-400'}`;
+                header.setAttribute('aria-sort', active ? (purchaseOrderSort.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+            });
+        }
+
         function renderPurchaseOrders() {
             const select = document.getElementById('purchase-vendor-filter');
             const selectedVendor = select.value || 'all';
@@ -1142,7 +1165,13 @@
             const entries = inventoryEntries
                 .filter(entry => selectedVendor === 'all' || entry.vendor === selectedVendor)
                 .slice()
-                .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                .sort((a, b) => {
+                    const comparison = purchaseOrderSort.key === 'id'
+                        ? String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true, sensitivity: 'base' })
+                        : (new Date(a.date || 0).getTime() || 0) - (new Date(b.date || 0).getTime() || 0);
+                    return purchaseOrderSort.direction === 'asc' ? comparison : -comparison;
+                });
+            updatePurchaseOrderSortIndicators();
 
             tbody.innerHTML = entries.map(entry => {
                 const styles = getPurchaseEntryStyles(entry);
@@ -1758,6 +1787,7 @@
             const editButton = document.getElementById('order-detail-edit-button');
             editButton.textContent = 'Edit Order Details';
             editButton.onclick = () => startEditOrder(orderId);
+            document.getElementById('order-detail-delete-button').onclick = () => deleteOrder(orderId);
             document.getElementById('order-detail-content').innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Customer</p><p>${escapeHtml(order.customer || 'Walk-in Customer')}</p><p class="text-gray-500">${escapeHtml(order.customerNumber || 'Contact not recorded')}</p>${order.customerAddress ? `<p class="mt-1 text-gray-500">${escapeHtml(order.customerAddress)}</p>` : ''}</div>
@@ -2064,6 +2094,36 @@
             showToast('Tracking ID copied.');
         }
 
+        function deleteOrder(orderId) {
+            const orderIndex = orders.findIndex(item => String(item.id) === String(orderId));
+            if (orderIndex < 0) return;
+            const order = orders[orderIndex];
+            if (!window.confirm(`Delete order ${order.id} and return its recorded items to inventory?`)) return;
+
+            getOrderLineItems(order).forEach(lineItem => {
+                const product = inventory.find(item => String(item.id) === String(lineItem.id));
+                if (!product) return;
+                const quantity = Math.max(1, Number(lineItem.quantity ?? lineItem.qty) || 1);
+                product.stock = (Number(product.stock) || 0) + quantity;
+                const size = String(lineItem.size || lineItem.selectedSize || 'Free Size');
+                if (product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, size)) {
+                    product.sizeQuantities[size] = (Number(product.sizeQuantities[size]) || 0) + quantity;
+                }
+            });
+
+            orders.splice(orderIndex, 1);
+            orderEditDraftOrderId = '';
+            orderEditDraft = null;
+            saveState();
+            filterInventory();
+            if (googleSheetEndpoint) {
+                syncInventoryWithGoogleSheets(null, true);
+                deleteOrderFromGoogleSheet(orderId);
+            }
+            closeModal('order-detail-modal');
+            showToast(`Order ${orderId} deleted and stock restored.`);
+        }
+
         function getFilteredInventory() {
             const query = document.getElementById('search-input').value.toLowerCase();
             const stockFilter = document.getElementById('inventory-stock-filter').value;
@@ -2230,8 +2290,18 @@
 
         function formatDashboardDate(value) {
             if (!value) return 'Date unavailable';
-            const date = new Date(value);
-            return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            let date = null;
+            if (typeof value === 'string') {
+                const indianDate = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,.*)?$/);
+                if (indianDate) {
+                    const year = Number(indianDate[3]) < 100 ? 2000 + Number(indianDate[3]) : Number(indianDate[3]);
+                    date = new Date(year, Number(indianDate[2]) - 1, Number(indianDate[1]));
+                }
+            }
+            if (!date) date = new Date(value);
+            return Number.isNaN(date.getTime())
+                ? String(value).split(',')[0].trim()
+                : date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         }
 
         function updateStats(filtered = getFilteredInventory()) {
@@ -2405,6 +2475,18 @@
             }).then(() => {
                 console.log('Order synced to Google Sheets.');
             }).catch(err => console.error('Sheet Sync Error:', err));
+        }
+
+        function deleteOrderFromGoogleSheet(orderId) {
+            if (!googleSheetEndpoint) return;
+            fetch(googleSheetEndpoint, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'DELETE_ORDER', data: { id: orderId } })
+            }).then(() => {
+                console.log('Order deletion synced to Google Sheets.');
+            }).catch(err => console.error('Order deletion sync error:', err));
         }
 
         function buildGoogleSheetInventoryRows() {
