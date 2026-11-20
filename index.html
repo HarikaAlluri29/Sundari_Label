@@ -186,7 +186,12 @@
             </div>
 
             <!-- Header Right Menu -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- Mobile Search Toggle Button (placed just before Instagram icon) -->
+                <button id="mobile-search-btn" type="button" onclick="toggleMobileSearchBar()" aria-label="Search garments" title="Search garments" class="lg:hidden p-1.5 rounded-xl text-sundari-purple hover:bg-sundari-gold/10 transition-colors focus:outline-none">
+                    <i class="fa-solid fa-magnifying-glass text-xl"></i>
+                </button>
+
                 <button id="instagram-qr-button" type="button" onclick="handleInstagramButtonClick()" aria-label="Show SUNDARI Instagram QR code. Swipe left to reveal the navigation menu." title="Instagram QR code · Swipe left to reveal menu" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
@@ -235,6 +240,19 @@
         </div>
     </header>
 
+    <!-- Collapsible Search Bar Directly Below Header (Mobile View) -->
+    <div id="mobile-search-bar" class="hidden lg:hidden sticky top-16 z-30 bg-[#F8F5EE]/95 backdrop-blur border-b border-sundari-gold/30 px-3 py-2 shadow-sm">
+        <div class="max-w-7xl mx-auto relative flex items-center gap-2">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-sundari-purple/70 text-xs"></i>
+                <input type="text" id="mobile-search-input" oninput="syncSearchFromMobile(this.value)" placeholder="Search garments by name, SKU, size..." class="w-full pl-8 pr-8 py-1.5 text-sm bg-white border border-sundari-gold/40 rounded-xl focus:outline-none focus:border-sundari-purple text-sundari-textDark placeholder-gray-400">
+                <button type="button" onclick="clearMobileSearch()" aria-label="Clear search" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sundari-purple text-xs">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="instagram-qr-modal" class="fixed inset-0 z-[80] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('instagram-qr-modal')">
         <div class="relative w-full max-w-md rounded-2xl bg-white p-4 sm:p-5 custom-shadow border border-sundari-gold/40">
             <div class="mb-3 flex items-center justify-between">
@@ -249,27 +267,25 @@
     <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex-grow w-full">
         
         <!-- TOP STATS BAR & QUICK SEARCH (SINGLE ROW ON WEB VIEW) -->
-        <div id="inventory-toolbar" class="mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-sundari-gold/20 shadow-sm">
-            <!-- Search & Filters (Single Row on Desktop) -->
-            <div class="flex flex-col lg:flex-row lg:items-center gap-2 flex-1 min-w-0">
-                <!-- Search Input -->
+        <div id="inventory-toolbar" class="mb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 lg:gap-3 bg-white p-2.5 sm:p-3.5 rounded-2xl border border-sundari-gold/20 shadow-sm">
+            <!-- Desktop Search & Filters -->
+            <div class="hidden lg:flex lg:items-center gap-2 flex-1 min-w-0">
                 <div class="relative flex-1 min-w-[200px]">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <input type="text" id="search-input" oninput="filterInventory()" placeholder="Search garments by name, SKU, size..." class="w-full pl-9 pr-4 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark placeholder-gray-400">
+                    <input type="text" id="search-input" oninput="syncSearchFromDesktop(this.value)" placeholder="Search garments by name, SKU, size..." class="w-full pl-9 pr-4 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark placeholder-gray-400">
                 </div>
-                <!-- Filters Grid for Mobile, Row for Desktop -->
-                <div class="grid grid-cols-3 lg:flex lg:items-center gap-1.5 sm:gap-2">
-                    <div class="relative w-full min-w-0 lg:w-40">
+                <div class="flex items-center gap-2">
+                    <div class="relative w-40">
                         <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
-                        <select id="inventory-stock-filter" onchange="filterInventory()" aria-label="Filter inventory by stock availability" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                        <select id="inventory-stock-filter" onchange="filterInventory()" aria-label="Filter inventory by stock availability" class="w-full min-w-0 pl-8 pr-2 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
                             <option value="available" selected>Available items</option>
                             <option value="out-of-stock">Out of stock</option>
                             <option value="all">All items</option>
                         </select>
                     </div>
-                    <div class="relative w-full min-w-0 lg:w-32">
+                    <div class="relative w-32">
                         <i class="fa-solid fa-ruler-horizontal absolute left-3 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
-                        <select id="inventory-size-filter" onchange="filterInventory()" aria-label="Filter inventory by size" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                        <select id="inventory-size-filter" onchange="filterInventory()" aria-label="Filter inventory by size" class="w-full min-w-0 pl-8 pr-2 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
                             <option value="all" selected>All sizes</option>
                             <option value="M">M</option>
                             <option value="L">L</option>
@@ -277,9 +293,9 @@
                             <option value="XXL">XXL</option>
                         </select>
                     </div>
-                    <div class="relative w-full min-w-0 lg:w-40">
+                    <div class="relative w-40">
                         <i class="fa-solid fa-arrow-down-wide-short absolute left-2.5 top-1/2 -translate-y-1/2 text-sundari-goldDark text-xs pointer-events-none"></i>
-                        <select id="inventory-sort-filter" onchange="filterInventory()" aria-label="Sort inventory" class="w-full min-w-0 pl-7 pr-1 sm:pl-8 sm:pr-2 py-2 text-[10px] sm:text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
+                        <select id="inventory-sort-filter" onchange="filterInventory()" aria-label="Sort inventory" class="w-full min-w-0 pl-8 pr-2 py-2 text-sm bg-sundari-cream/60 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-textDark">
                             <option value="oldest" selected>Sort</option>
                             <option value="price-desc">₹ High to low</option>
                             <option value="price-asc">₹ Low to high</option>
@@ -289,15 +305,66 @@
                 </div>
             </div>
 
-            <!-- Stats Badge Bar -->
-            <div class="flex items-center justify-between lg:justify-end gap-2.5 text-xs shrink-0">
+            <!-- Mobile Single Row: Styles, Active Stock & Single Filter Button -->
+            <div class="flex lg:hidden items-center justify-between gap-1.5 text-[11px] w-full">
+                <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-2 py-1.5 rounded-xl font-medium text-sundari-purple whitespace-nowrap">
+                    Styles: <span id="stat-total-stock-mobile" class="font-bold text-sundari-goldDark">0</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-xl font-medium text-emerald-700 whitespace-nowrap">
+                    Active Stock: <span id="stat-total-qty-mobile" class="font-bold">0</span>
+                </div>
+                <button id="mobile-filters-toggle-btn" type="button" onclick="toggleMobileFiltersPanel()" aria-expanded="false" aria-controls="mobile-filters-panel" class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-sundari-purple text-sundari-gold rounded-xl font-semibold whitespace-nowrap shadow-sm active:scale-95 transition">
+                    <i class="fa-solid fa-sliders text-[10px]"></i>
+                    <span>Filters</span>
+                    <i id="mobile-filters-chevron" class="fa-solid fa-chevron-down text-[9px] transition-transform"></i>
+                </button>
+            </div>
+
+            <!-- Expandable Mobile Filters Grouped by Category -->
+            <div id="mobile-filters-panel" class="hidden lg:hidden w-full pt-2 border-t border-sundari-gold/20 space-y-2.5 text-xs">
+                <!-- Category 1: Availability -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Availability</p>
+                    <div class="grid grid-cols-3 gap-1.5" role="group" aria-label="Availability filter">
+                        <button type="button" data-mobile-stock="available" onclick="setMobileStockFilter('available')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">Available</button>
+                        <button type="button" data-mobile-stock="out-of-stock" onclick="setMobileStockFilter('out-of-stock')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">Out of Stock</button>
+                        <button type="button" data-mobile-stock="all" onclick="setMobileStockFilter('all')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">All Items</button>
+                    </div>
+                </div>
+
+                <!-- Category 2: Size -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Size</p>
+                    <div class="grid grid-cols-5 gap-1.5" role="group" aria-label="Size filter">
+                        <button type="button" data-mobile-size="all" onclick="setMobileSizeFilter('all')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">All</button>
+                        <button type="button" data-mobile-size="M" onclick="setMobileSizeFilter('M')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">M</button>
+                        <button type="button" data-mobile-size="L" onclick="setMobileSizeFilter('L')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">L</button>
+                        <button type="button" data-mobile-size="XL" onclick="setMobileSizeFilter('XL')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">XL</button>
+                        <button type="button" data-mobile-size="XXL" onclick="setMobileSizeFilter('XXL')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">XXL</button>
+                    </div>
+                </div>
+
+                <!-- Category 3: Sort By -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Sort By</p>
+                    <div class="grid grid-cols-2 gap-1.5" role="group" aria-label="Sort filter">
+                        <button type="button" data-mobile-sort="oldest" onclick="setMobileSortFilter('oldest')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">Default</button>
+                        <button type="button" data-mobile-sort="newest" onclick="setMobileSortFilter('newest')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">What's New</button>
+                        <button type="button" data-mobile-sort="price-asc" onclick="setMobileSortFilter('price-asc')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">₹ Low to High</button>
+                        <button type="button" data-mobile-sort="price-desc" onclick="setMobileSortFilter('price-desc')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">₹ High to Low</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop Stats Badge Bar -->
+            <div class="hidden lg:flex items-center justify-end gap-2.5 text-xs shrink-0">
                 <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-3 py-2 rounded-xl font-medium text-sundari-purple whitespace-nowrap">
                     Styles: <span id="stat-total-stock" class="font-bold text-sundari-goldDark">0</span>
                 </div>
                 <div class="bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl font-medium text-emerald-700 whitespace-nowrap">
                     Active Stock: <span id="stat-total-qty" class="font-bold">0</span>
                 </div>
-                <button onclick="switchView('inventory')" id="view-inventory-btn" class="hidden sm:inline-flex items-center px-3 py-2 bg-sundari-purple text-white rounded-xl text-xs font-semibold hover:bg-sundari-purpleDark transition whitespace-nowrap">
+                <button onclick="switchView('inventory')" id="view-inventory-btn" class="inline-flex items-center px-3 py-2 bg-sundari-purple text-white rounded-xl text-xs font-semibold hover:bg-sundari-purpleDark transition whitespace-nowrap">
                     <i class="fa-solid fa-grid-2 mr-1.5"></i> Inventory Grid
                 </button>
             </div>
@@ -702,6 +769,82 @@
         let orderEditDraft = null;
         let googleSheetEndpoint = SHARED_GOOGLE_SHEET_ENDPOINT || localStorage.getItem('sundari_sheet_url') || '';
 
+        // --- MOBILE SEARCH & FILTER HELPERS ---
+        function toggleMobileSearchBar() {
+            const bar = document.getElementById('mobile-search-bar');
+            const mobileInput = document.getElementById('mobile-search-input');
+            const desktopInput = document.getElementById('search-input');
+            const invSection = document.getElementById('view-inventory');
+            if (invSection && invSection.classList.contains('hidden')) {
+                switchView('inventory');
+            }
+            const willOpen = bar.classList.contains('hidden');
+            bar.classList.toggle('hidden', !willOpen);
+            if (willOpen) {
+                mobileInput.value = desktopInput.value;
+                setTimeout(() => mobileInput.focus(), 50);
+            }
+        }
+
+        function syncSearchFromMobile(value) {
+            document.getElementById('search-input').value = value;
+            filterInventory();
+        }
+
+        function syncSearchFromDesktop(value) {
+            const mobileInput = document.getElementById('mobile-search-input');
+            if (mobileInput) mobileInput.value = value;
+            filterInventory();
+        }
+
+        function clearMobileSearch() {
+            const mobileInput = document.getElementById('mobile-search-input');
+            mobileInput.value = '';
+            document.getElementById('search-input').value = '';
+            filterInventory();
+            mobileInput.focus();
+        }
+
+        function toggleMobileFiltersPanel() {
+            const panel = document.getElementById('mobile-filters-panel');
+            const btn = document.getElementById('mobile-filters-toggle-btn');
+            const chevron = document.getElementById('mobile-filters-chevron');
+            const isExpanded = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', isExpanded);
+            btn.setAttribute('aria-expanded', String(!isExpanded));
+            chevron.classList.toggle('rotate-180', !isExpanded);
+        }
+
+        function highlightMobileFilterButtons(selector, attrName, activeValue) {
+            document.querySelectorAll(selector).forEach(btn => {
+                const isActive = btn.getAttribute(attrName) === activeValue;
+                btn.classList.toggle('bg-sundari-purple', isActive);
+                btn.classList.toggle('text-sundari-gold', isActive);
+                btn.classList.toggle('border-sundari-purple', isActive);
+                btn.classList.toggle('bg-sundari-cream/70', !isActive);
+                btn.classList.toggle('text-sundari-purple', !isActive);
+                btn.classList.toggle('border-sundari-gold/30', !isActive);
+            });
+        }
+
+        function setMobileStockFilter(value) {
+            document.getElementById('inventory-stock-filter').value = value;
+            highlightMobileFilterButtons('.mobile-stock-btn', 'data-mobile-stock', value);
+            filterInventory();
+        }
+
+        function setMobileSizeFilter(value) {
+            document.getElementById('inventory-size-filter').value = value;
+            highlightMobileFilterButtons('.mobile-size-btn', 'data-mobile-size', value);
+            filterInventory();
+        }
+
+        function setMobileSortFilter(value) {
+            document.getElementById('inventory-sort-filter').value = value;
+            highlightMobileFilterButtons('.mobile-sort-btn', 'data-mobile-sort', value);
+            filterInventory();
+        }
+
         // --- INITIALIZATION ---
         window.onload = async function() {
             try {
@@ -834,7 +977,7 @@
             image.src = 'assets/default.jpeg';
         }
 
-        // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
+// --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
         function renderInventoryGrid(itemsToRender = inventory) {
             const grid = document.getElementById('product-grid');
             const emptyState = document.getElementById('empty-state');
@@ -852,8 +995,9 @@
                 const sizeBadges = (product.sizes || []).map(size => {
                     const availability = getSizeAvailability(product, size);
                     const sizeDisabled = availability.available <= 0;
-                    return `<span class="px-1.5 py-1 rounded-md border text-[10px] ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
-                        <span class="font-bold">${size}</span> <span>${availability.tracked ? availability.available : `${availability.available} total`}</span>
+                    const qtyLabel = availability.tracked ? availability.available : `${availability.available} total`;
+                    return `<span class="px-1.5 py-0.5 rounded border text-[10px] leading-tight ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
+                        <span class="font-bold">${size}</span><span>${qtyLabel}</span>
                     </span>`;
                 }).join('');
                 
@@ -869,23 +1013,23 @@
                                     ${isOutOfStock ? 'Out of Stock' : 'Stock: ' + product.stock}
                                 </span>
                             </div>
+                            <button type="button" onclick="openSizeSelector('${product.id}')" ${isOutOfStock ? 'disabled' : ''} aria-label="${isOutOfStock ? 'Sold Out' : 'Add ' + product.name + ' to order'}"
+                                    class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-md ${isOutOfStock ? 'bg-white/90 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-white text-sundari-rose border border-sundari-rose hover:bg-sundari-cream active:scale-95'}">
+                                <i class="fa-solid fa-bag-shopping text-[11px]"></i>
+                                <span>${isOutOfStock ? 'Sold Out' : 'Add'}</span>
+                            </button>
                         </div>
 
                         <!-- Details Body -->
                         <div class="p-3 flex-grow flex flex-col justify-between">
                             <div>
                                 <h3 class="font-bold text-sm text-sundari-purple line-clamp-1 leading-snug">${product.name}</h3>
-                                <div class="mt-1.5"><p class="text-[10px] font-semibold text-gray-500 mb-1">Size · Qty available</p><div class="flex flex-wrap gap-1">${sizeBadges}</div>${!hasSizeBreakdown ? '<p class="text-[9px] text-gray-400 mt-1">Size level counts are not recorded for this item.</p>' : ''}</div>
+                                <div class="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
+                                    <span class="font-semibold text-gray-500 shrink-0">Size :</span>
+                                    <div class="flex flex-wrap items-center gap-1">${sizeBadges}</div>
+                                    ${!hasSizeBreakdown ? '<span class="text-[9px] text-gray-400">Size split not recorded.</span>' : ''}
+                                </div>
                                 <p class="text-sm font-bold text-sundari-goldDark mt-1">Price: ₹${product.price.toLocaleString('en-IN')}</p>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="mt-3">
-                                <button onclick="openSizeSelector('${product.id}')" ${isOutOfStock ? 'disabled' : ''} 
-                                        class="w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${isOutOfStock ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-sundari-purple text-sundari-gold hover:bg-sundari-purpleDark active:scale-95 shadow-md'}">
-                                    <i class="fa-solid fa-plus text-[10px]"></i>
-                                    <span>${isOutOfStock ? 'Sold Out' : 'Add to Order'}</span>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -2065,25 +2209,24 @@
         }
 
        function saveOrderShippingDetails(orderId) {
-    const order = orders.find(item => item.id === orderId);
-    if (!order) return;
-    const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
-    const trackingId = document.getElementById('order-tracking-id')?.value.trim() || '';
-    if (!courierPartner || !trackingId) return showToast('Enter both courier partner and tracking ID.');
+            const order = orders.find(item => item.id === orderId);
+            if (!order) return;
+            const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
+            const trackingId = document.getElementById('order-tracking-id')?.value.trim() || '';
+            if (!courierPartner || !trackingId) return showToast('Enter both courier partner and tracking ID.');
 
-    order.courierPartner = courierPartner;
-    order.trackingId = trackingId;
+            order.courierPartner = courierPartner;
+            order.trackingId = trackingId;
 
-    // Auto-advance from Confirmed to In Transit once shipping details are saved
-    if (getOrderStatusOption(order.status) === 'Confirmed') {
-        order.status = 'In Transit';
-    }
+            if (getOrderStatusOption(order.status) === 'Confirmed') {
+                order.status = 'In Transit';
+            }
 
-    saveState();
-    pushOrderToGoogleSheet(order);
-    openOrderDetails(orderId);
-    showToast('Shipping details saved and status set to In Transit.');
-}
+            saveState();
+            pushOrderToGoogleSheet(order);
+            openOrderDetails(orderId);
+            showToast('Shipping details saved and status set to In Transit.');
+        }
 
         async function copyOrderTrackingId(orderId) {
             const order = orders.find(item => item.id === orderId);
@@ -2248,7 +2391,7 @@
                     const orderLines = getOrderLineItems(order);
                     const imageCell = includeProductImages ? `<td class="order-col-image py-1.5 pr-1 sm:pr-3"><div class="flex items-center gap-1">${orderLines.slice(0, 3).map((item, index) => `<img src="${getEmbeddableImageUrl(item.image || '')}" alt="${escapeHtml(item.name || 'Product')}" data-drive-fallback-url="${getDriveImageFallbackUrl(item.image || '')}" data-placeholder-url="assets/default.jpeg" loading="lazy" class="${index ? 'hidden sm:block' : ''} h-10 w-8 rounded object-cover border border-sundari-gold/20" onerror="handleProductImageError(this)">`).join('')}${orderLines.length > 3 ? `<span class="hidden sm:inline text-[10px] text-gray-500">+${orderLines.length - 3}</span>` : ''}</div></td>` : '';
                     const statusCell = isOrdersList ? `<td class="order-col-status py-1 pr-1 text-center" onclick="event.stopPropagation()"><select aria-label="Status for order ${escapeHtml(order.id)}" onchange="updateOrderStatus('${escapeHtml(order.id)}', this.value, true)" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" class="w-full min-w-0 rounded-md border border-sundari-gold/30 bg-white px-1 py-1 text-[9px] sm:text-xs text-sundari-purple">${['Confirmed', 'In Transit', 'Delivered'].map(status => `<option value="${status}" ${getOrderStatusOption(order.status) === status ? 'selected' : ''}>${status}</option>`).join('')}</select></td>` : '';
-                    return `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${escapeHtml(order.id)}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="order-col-id py-2 pr-1 sm:pr-3 font-bold text-sundari-purple break-all">${escapeHtml(order.id)}</td>${imageCell}<td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td>${statusCell}<td class="order-col-revenue py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
+                    return `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="order-col-id py-2 pr-1 sm:pr-3 font-bold text-sundari-purple break-all">${escapeHtml(order.id)}</td>${imageCell}<td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${formatRupees(getOrderRevenue(order))}</td><td class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">${cost.complete ? formatRupees(cost.value) : '—'}</td>${statusCell}<td class="order-col-revenue py-2 text-right font-bold ${profit !== null && profit < 0 ? 'text-red-700' : 'text-emerald-700'}">${profit === null ? '—' : formatRupees(profit)}</td></tr>`;
                 }).join('')}</tbody></table>`;
         }
 
@@ -2316,12 +2459,17 @@
         function updateStats(filtered = getFilteredInventory()) {
             const sizeFilter = document.getElementById('inventory-size-filter').value;
             document.getElementById('stat-total-stock').innerText = filtered.length;
+            const mobileStockEl = document.getElementById('stat-total-stock-mobile');
+            if (mobileStockEl) mobileStockEl.innerText = filtered.length;
+
             const totalQty = filtered.reduce((sum, item) => {
                 if (sizeFilter === 'all') return sum + (Number(item.stock) || 0);
                 const tracked = item.sizeQuantities && Object.prototype.hasOwnProperty.call(item.sizeQuantities, sizeFilter);
                 return sum + (tracked ? Math.max(0, Number(item.sizeQuantities[sizeFilter]) || 0) : (Number(item.stock) || 0));
             }, 0);
             document.getElementById('stat-total-qty').innerText = totalQty;
+            const mobileQtyEl = document.getElementById('stat-total-qty-mobile');
+            if (mobileQtyEl) mobileQtyEl.innerText = totalQty;
         }
 
         // --- NAVIGATION & MODALS ---
@@ -2333,6 +2481,9 @@
 
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
             document.getElementById('inventory-toolbar').classList.toggle('hidden', viewName !== 'inventory');
+            if (viewName !== 'inventory') {
+                document.getElementById('mobile-search-bar')?.classList.add('hidden');
+            }
             setActiveNavigation(viewName);
             if (viewName === 'dashboard') renderDashboard();
             if (viewName === 'orders') renderOrdersTable();
