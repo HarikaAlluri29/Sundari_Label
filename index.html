@@ -977,7 +977,8 @@
             image.src = 'assets/default.jpeg';
         }
 
-// --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
+
+  // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
         function renderInventoryGrid(itemsToRender = inventory) {
             const grid = document.getElementById('product-grid');
             const emptyState = document.getElementById('empty-state');
@@ -996,7 +997,7 @@
                     const availability = getSizeAvailability(product, size);
                     const sizeDisabled = availability.available <= 0;
                     const qtyLabel = availability.tracked ? availability.available : `${availability.available} total`;
-                    return `<span class="px-1.5 py-0.5 rounded border text-[10px] leading-tight ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
+                    return `<span class="shrink-0 whitespace-nowrap px-1 py-0.5 rounded border text-[9px] leading-none ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
                         <span class="font-bold">${size}</span><span>${qtyLabel}</span>
                     </span>`;
                 }).join('');
@@ -1022,12 +1023,12 @@
 
                         <!-- Details Body -->
                         <div class="p-3 flex-grow flex flex-col justify-between">
-                            <div>
+                            <div class="min-w-0">
                                 <h3 class="font-bold text-sm text-sundari-purple line-clamp-1 leading-snug">${product.name}</h3>
-                                <div class="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
+                                <div class="mt-1.5 flex flex-nowrap items-center gap-1 overflow-x-auto whitespace-nowrap text-[9px] leading-none">
                                     <span class="font-semibold text-gray-500 shrink-0">Size :</span>
-                                    <div class="flex flex-wrap items-center gap-1">${sizeBadges}</div>
-                                    ${!hasSizeBreakdown ? '<span class="text-[9px] text-gray-400">Size split not recorded.</span>' : ''}
+                                    <div class="flex flex-nowrap items-center gap-1 shrink-0">${sizeBadges}</div>
+                                    ${!hasSizeBreakdown ? '<span class="text-[9px] text-gray-400 shrink-0">Size split not recorded.</span>' : ''}
                                 </div>
                                 <p class="text-sm font-bold text-sundari-goldDark mt-1">Price: ₹${product.price.toLocaleString('en-IN')}</p>
                             </div>
