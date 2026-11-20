@@ -190,6 +190,15 @@
                 <button id="instagram-qr-button" type="button" onclick="handleInstagramButtonClick()" aria-label="Show SUNDARI Instagram QR code. Swipe left to reveal the navigation menu." title="Instagram QR code · Swipe left to reveal menu" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
+
+                <!-- Cart Icon Moved to Header -->
+                <button id="cart-float-btn" type="button" onclick="toggleCartModal()" aria-label="Open order cart" title="Order Cart" class="relative p-1.5 rounded-xl text-sundari-purple hover:bg-sundari-gold/10 transition-colors focus:outline-none">
+                    <i class="fa-solid fa-cart-shopping text-2xl"></i>
+                    <span id="cart-count-badge" class="absolute -top-0.5 -right-0.5 bg-sundari-gold text-sundari-purple text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border border-white shadow">
+                        0
+                    </span>
+                </button>
+
                 <nav id="desktop-header-menu" aria-label="Main navigation" class="hidden lg:flex items-center gap-1">
                     <a href="#" data-nav-view="inventory" onclick="switchView('inventory'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Home</a>
                     <a href="#" data-nav-view="dashboard" onclick="switchView('dashboard'); return false;" class="px-2.5 py-2 rounded-lg text-xs font-semibold text-sundari-purple hover:bg-sundari-gold/10 transition">Dashboard</a>
@@ -386,17 +395,6 @@
 
     </main>
 
-    <!-- FLOATING CART BUTTON (Fixed Bottom Right) -->
-    <div class="fixed bottom-5 right-5 z-40">
-        <button id="cart-float-btn" onclick="toggleCartModal()" class="relative bg-sundari-purple text-sundari-gold hover:bg-sundari-purpleDark p-4 rounded-full shadow-2xl transition-all transform hover:scale-105 active:scale-95 border-2 border-sundari-gold flex items-center justify-center">
-            <i class="fa-solid fa-cart-shopping text-2xl"></i>
-            <!-- Cart Count Badge -->
-            <span id="cart-count-badge" class="absolute -top-1 -right-1 bg-sundari-gold text-sundari-purple text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow">
-                0
-            </span>
-        </button>
-    </div>
-
     <!-- MODAL 1: CART & PLACE ORDER SLIDE-OVER -->
     <div id="cart-modal" class="fixed inset-0 z-50 hidden overflow-hidden bg-black/50 backdrop-blur-sm transition-opacity">
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
@@ -485,7 +483,11 @@
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
-                <div class="flex items-center gap-2"><button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button><button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button><button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+                <div class="flex items-center gap-2">
+					<button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button>
+					<button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button>
+					<button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+					</div>
             </div>
             <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
         </div>
@@ -2062,19 +2064,26 @@
             showToast('Order status updated.');
         }
 
-        function saveOrderShippingDetails(orderId) {
-            const order = orders.find(item => item.id === orderId);
-            if (!order) return;
-            const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
-            const trackingId = document.getElementById('order-tracking-id')?.value.trim() || '';
-            if (!courierPartner || !trackingId) return showToast('Enter both courier partner and tracking ID.');
-            order.courierPartner = courierPartner;
-            order.trackingId = trackingId;
-            saveState();
-            pushOrderToGoogleSheet(order);
-            openOrderDetails(orderId);
-            showToast('Shipping details saved.');
-        }
+       function saveOrderShippingDetails(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order) return;
+    const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
+    const trackingId = document.getElementById('order-tracking-id')?.value.trim() || '';
+    if (!courierPartner || !trackingId) return showToast('Enter both courier partner and tracking ID.');
+
+    order.courierPartner = courierPartner;
+    order.trackingId = trackingId;
+
+    // Auto-advance from Confirmed to In Transit once shipping details are saved
+    if (getOrderStatusOption(order.status) === 'Confirmed') {
+        order.status = 'In Transit';
+    }
+
+    saveState();
+    pushOrderToGoogleSheet(order);
+    openOrderDetails(orderId);
+    showToast('Shipping details saved and status set to In Transit.');
+}
 
         async function copyOrderTrackingId(orderId) {
             const order = orders.find(item => item.id === orderId);
