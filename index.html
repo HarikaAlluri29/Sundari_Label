@@ -1459,16 +1459,18 @@
             }
         }
 
-        function startEditPurchaseOrder(entryId) {
+      function startEditPurchaseOrder(entryId) {
             const entry = inventoryEntries.find(item => item.id === entryId);
             if (!entry) return;
             document.getElementById('edit-purchase-id').value = entry.id;
             document.getElementById('edit-purchase-vendor').value = entry.vendor || '';
             document.getElementById('edit-purchase-date').value = String(entry.date || '').slice(0, 10);
             
+            const defaultSizes = ['M', 'L', 'XL', 'XXL', 'XXXL'];
             const stylesHtml = getPurchaseEntryStyles(entry).map(style => {
                 const sizeQuantities = style.sizeQuantities || {};
-                const sizeFields = Object.keys(sizeQuantities).length ? `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${Object.entries(sizeQuantities).map(([size, quantity]) => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(quantity) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>` : '<p class="sm:col-span-2 text-[10px] text-gray-400">Size quantities are not tracked for this style.</p>';
+                const allSizes = [...new Set([...defaultSizes, ...Object.keys(sizeQuantities)])];
+                const sizeFields = `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${allSizes.map(size => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(sizeQuantities[size]) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>`;
                 return `
                 <div class="rounded-xl border border-sundari-gold/20 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2" data-edit-style-id="${escapeHtml(style.id)}">
                     <label class="text-[11px] font-semibold">Style name<input data-edit-field="name" value="${escapeHtml(style.name)}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
