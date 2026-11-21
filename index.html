@@ -291,6 +291,7 @@
                             <option value="L">L</option>
                             <option value="XL">XL</option>
                             <option value="XXL">XXL</option>
+                            <option value="XXXL">XXXL</option>
                         </select>
                     </div>
                     <div class="relative w-40">
@@ -305,54 +306,38 @@
                 </div>
             </div>
 
-            <!-- Mobile Single Row: Styles, Active Stock & Single Filter Button -->
-            <div class="flex lg:hidden items-center justify-between gap-1.5 text-[11px] w-full">
-                <div class="bg-sundari-purple/5 border border-sundari-purple/10 px-2 py-1.5 rounded-xl font-medium text-sundari-purple whitespace-nowrap">
-                    Styles: <span id="stat-total-stock-mobile" class="font-bold text-sundari-goldDark">0</span>
-                </div>
-                <div class="bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-xl font-medium text-emerald-700 whitespace-nowrap">
-                    Active Stock: <span id="stat-total-qty-mobile" class="font-bold">0</span>
-                </div>
-                <button id="mobile-filters-toggle-btn" type="button" onclick="toggleMobileFiltersPanel()" aria-expanded="false" aria-controls="mobile-filters-panel" class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-sundari-purple text-sundari-gold rounded-xl font-semibold whitespace-nowrap shadow-sm active:scale-95 transition">
-                    <i class="fa-solid fa-sliders text-[10px]"></i>
-                    <span>Filters</span>
-                    <i id="mobile-filters-chevron" class="fa-solid fa-chevron-down text-[9px] transition-transform"></i>
-                </button>
-            </div>
-
-            <!-- Expandable Mobile Filters Grouped by Category -->
-            <div id="mobile-filters-panel" class="hidden lg:hidden w-full pt-2 border-t border-sundari-gold/20 space-y-2.5 text-xs">
-                <!-- Category 1: Availability -->
-                <div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Availability</p>
-                    <div class="grid grid-cols-3 gap-1.5" role="group" aria-label="Availability filter">
-                        <button type="button" data-mobile-stock="available" onclick="setMobileStockFilter('available')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">Available</button>
-                        <button type="button" data-mobile-stock="out-of-stock" onclick="setMobileStockFilter('out-of-stock')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">Out of Stock</button>
-                        <button type="button" data-mobile-stock="all" onclick="setMobileStockFilter('all')" class="mobile-stock-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">All Items</button>
+            <!-- Mobile Single Row: Styles Icon, Active Stock Icon & Directly Accessible 3 Filters -->
+            <div class="flex lg:hidden items-center justify-between gap-1 text-[10px] w-full">
+                <div class="flex items-center gap-1 shrink-0">
+                    <div title="Styles" aria-label="Styles count" class="inline-flex items-center gap-1 bg-sundari-purple/5 border border-sundari-purple/10 px-2 py-1.5 rounded-xl font-medium text-sundari-purple whitespace-nowrap">
+                        <i class="fa-solid fa-person-dress text-xs text-sundari-purple"></i>
+                        <span id="stat-total-stock-mobile" class="font-bold text-sundari-goldDark">0</span>
+                    </div>
+                    <div title="Active Stock" aria-label="Active stock count" class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-xl font-medium text-emerald-700 whitespace-nowrap">
+                        <i class="fa-solid fa-boxes-stacked text-xs text-emerald-600"></i>
+                        <span id="stat-total-qty-mobile" class="font-bold">0</span>
                     </div>
                 </div>
-
-                <!-- Category 2: Size -->
-                <div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Size</p>
-                    <div class="grid grid-cols-5 gap-1.5" role="group" aria-label="Size filter">
-                        <button type="button" data-mobile-size="all" onclick="setMobileSizeFilter('all')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">All</button>
-                        <button type="button" data-mobile-size="M" onclick="setMobileSizeFilter('M')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">M</button>
-                        <button type="button" data-mobile-size="L" onclick="setMobileSizeFilter('L')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">L</button>
-                        <button type="button" data-mobile-size="XL" onclick="setMobileSizeFilter('XL')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">XL</button>
-                        <button type="button" data-mobile-size="XXL" onclick="setMobileSizeFilter('XXL')" class="mobile-size-btn py-1.5 px-1 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">XXL</button>
-                    </div>
-                </div>
-
-                <!-- Category 3: Sort By -->
-                <div>
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-sundari-purple/70 mb-1">Sort By</p>
-                    <div class="grid grid-cols-2 gap-1.5" role="group" aria-label="Sort filter">
-                        <button type="button" data-mobile-sort="oldest" onclick="setMobileSortFilter('oldest')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-purple text-sundari-gold border-sundari-purple">Default</button>
-                        <button type="button" data-mobile-sort="newest" onclick="setMobileSortFilter('newest')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">What's New</button>
-                        <button type="button" data-mobile-sort="price-asc" onclick="setMobileSortFilter('price-asc')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">₹ Low to High</button>
-                        <button type="button" data-mobile-sort="price-desc" onclick="setMobileSortFilter('price-desc')" class="mobile-sort-btn py-1.5 px-2 rounded-lg border font-semibold text-[11px] bg-sundari-cream/70 text-sundari-purple border-sundari-gold/30">₹ High to Low</button>
-                    </div>
+                <div class="flex items-center gap-1 flex-1 min-w-0">
+                    <select id="mobile-stock-filter" onchange="setMobileStockFilter(this.value)" aria-label="Filter inventory by stock availability" class="flex-1 min-w-0 px-1.5 py-1.5 text-[10px] font-semibold bg-sundari-cream/70 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-purple">
+                        <option value="available" selected>Available</option>
+                        <option value="out-of-stock">Out of stock</option>
+                        <option value="all">All items</option>
+                    </select>
+                    <select id="mobile-size-filter" onchange="setMobileSizeFilter(this.value)" aria-label="Filter inventory by size" class="w-[54px] shrink-0 px-1 py-1.5 text-[10px] font-semibold bg-sundari-cream/70 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-purple">
+                        <option value="all" selected>Sizes</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                        <option value="XXXL">XXXL</option>
+                    </select>
+                    <select id="mobile-sort-filter" onchange="setMobileSortFilter(this.value)" aria-label="Sort inventory" class="flex-1 min-w-0 px-1.5 py-1.5 text-[10px] font-semibold bg-sundari-cream/70 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-purple">
+                        <option value="oldest" selected>Sort</option>
+                        <option value="price-desc">₹ High-Low</option>
+                        <option value="price-asc">₹ Low-High</option>
+                        <option value="newest">What's new</option>
+                    </select>
                 </div>
             </div>
 
@@ -805,47 +790,27 @@
             mobileInput.focus();
         }
 
-        function toggleMobileFiltersPanel() {
-            const panel = document.getElementById('mobile-filters-panel');
-            const btn = document.getElementById('mobile-filters-toggle-btn');
-            const chevron = document.getElementById('mobile-filters-chevron');
-            const isExpanded = !panel.classList.contains('hidden');
-            panel.classList.toggle('hidden', isExpanded);
-            btn.setAttribute('aria-expanded', String(!isExpanded));
-            chevron.classList.toggle('rotate-180', !isExpanded);
-        }
-
-        function highlightMobileFilterButtons(selector, attrName, activeValue) {
-            document.querySelectorAll(selector).forEach(btn => {
-                const isActive = btn.getAttribute(attrName) === activeValue;
-                btn.classList.toggle('bg-sundari-purple', isActive);
-                btn.classList.toggle('text-sundari-gold', isActive);
-                btn.classList.toggle('border-sundari-purple', isActive);
-                btn.classList.toggle('bg-sundari-cream/70', !isActive);
-                btn.classList.toggle('text-sundari-purple', !isActive);
-                btn.classList.toggle('border-sundari-gold/30', !isActive);
-            });
-        }
-
         function setMobileStockFilter(value) {
             document.getElementById('inventory-stock-filter').value = value;
-            highlightMobileFilterButtons('.mobile-stock-btn', 'data-mobile-stock', value);
+            const mobileSelect = document.getElementById('mobile-stock-filter');
+            if (mobileSelect) mobileSelect.value = value;
             filterInventory();
         }
 
         function setMobileSizeFilter(value) {
             document.getElementById('inventory-size-filter').value = value;
-            highlightMobileFilterButtons('.mobile-size-btn', 'data-mobile-size', value);
+            const mobileSelect = document.getElementById('mobile-size-filter');
+            if (mobileSelect) mobileSelect.value = value;
             filterInventory();
         }
 
         function setMobileSortFilter(value) {
             document.getElementById('inventory-sort-filter').value = value;
-            highlightMobileFilterButtons('.mobile-sort-btn', 'data-mobile-sort', value);
+            const mobileSelect = document.getElementById('mobile-sort-filter');
+            if (mobileSelect) mobileSelect.value = value;
             filterInventory();
         }
-
-        // --- INITIALIZATION ---
+		// --- INITIALIZATION ---
         window.onload = async function() {
             try {
                 if (googleSheetEndpoint) {
@@ -1465,8 +1430,8 @@
                         <span class="text-[11px] font-semibold text-sundari-purple">Size quantities *</span>
                         <button type="button" onclick="addEditNewStyleSize(this)" class="text-[11px] text-sundari-purple font-semibold hover:underline">+ Add size</button>
                     </div>
-                    <div class="edit-new-size-list grid grid-cols-2 sm:grid-cols-4 gap-1">
-                        ${['M', 'L', 'XL', 'XXL'].map(size => editNewSizeQuantityRow(size, 0)).join('')}
+                    <div class="edit-new-size-list grid grid-cols-2 sm:grid-cols-5 gap-1">
+                        ${['M', 'L', 'XL', 'XXL', 'XXXL'].map(size => editNewSizeQuantityRow(size, 0)).join('')}
                     </div>
                 </div>
             </div>`;
@@ -1503,7 +1468,7 @@
             
             const stylesHtml = getPurchaseEntryStyles(entry).map(style => {
                 const sizeQuantities = style.sizeQuantities || {};
-                const sizeFields = Object.keys(sizeQuantities).length ? `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-2">${Object.entries(sizeQuantities).map(([size, quantity]) => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(quantity) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>` : '<p class="sm:col-span-2 text-[10px] text-gray-400">Size quantities are not tracked for this style.</p>';
+                const sizeFields = Object.keys(sizeQuantities).length ? `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${Object.entries(sizeQuantities).map(([size, quantity]) => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(quantity) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>` : '<p class="sm:col-span-2 text-[10px] text-gray-400">Size quantities are not tracked for this style.</p>';
                 return `
                 <div class="rounded-xl border border-sundari-gold/20 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2" data-edit-style-id="${escapeHtml(style.id)}">
                     <label class="text-[11px] font-semibold">Style name<input data-edit-field="name" value="${escapeHtml(style.name)}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
@@ -1684,7 +1649,7 @@
             const template = document.getElementById('inventory-style-template');
             const card = template.content.firstElementChild.cloneNode(true);
             const sizes = card.querySelector('.size-quantity-list');
-            ['M', 'L', 'XL', 'XXL'].forEach(size => sizes.insertAdjacentHTML('beforeend', inventorySizeRow(size)));
+            ['M', 'L', 'XL', 'XXL', 'XXXL'].forEach(size => sizes.insertAdjacentHTML('beforeend', inventorySizeRow(size)));
             document.getElementById('inventory-style-list').appendChild(card);
             refreshInventoryStyleCards();
             updateInventoryEntryTotals();
