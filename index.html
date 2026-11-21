@@ -168,9 +168,9 @@
         <div class="flex flex-col items-center text-center text-sundari-purple">
             <img src="./assets/icon-192.png" alt="" class="h-40 w-40 object-contain mb-4">
             <div class="startup-spinner" aria-hidden="true"></div>
-			<p class="mt-4 font-brand font-bold">SUNDARI LABEL</p>
+            <p class="mt-4 font-brand font-bold">SUNDARI LABEL</p>
             <p class="mt-1 text-xs text-gray-500">Loading...</p>
-			<p class="mt-1 text-xs text-gray-500">Loading your inventory and orders…</p>
+            <p class="mt-1 text-xs text-gray-500">Loading your inventory and orders…</p>
         </div>
     </div>
 
@@ -536,10 +536,10 @@
             <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
                 <div class="flex items-center gap-2">
-					<button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button>
-					<button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button>
-					<button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-					</div>
+                    <button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button>
+                    <button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button>
+                    <button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
             </div>
             <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
         </div>
@@ -643,7 +643,7 @@
                             <div><label class="block font-semibold text-sundari-purple mb-0.5">Item Name (optional)</label><input type="text" data-field="name" placeholder="e.g. Printed cotton kurti" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm"></div>
                             <div>
                                 <label class="block font-semibold text-sundari-purple mb-0.5">Product image (optional)</label>
-                                <input type="text" data-field="image" placeholder="Paste an image URL" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                                <input type="text" data-field="image" oninput="handleStyleImageUrlInput(this)" placeholder="Paste an image URL" class="w-full p-1.5 bg-white border border-sundari-gold/40 rounded-lg text-sm">
                                 <div class="mt-1 flex items-center gap-2"><input type="file" accept="image/*" aria-label="Choose product image from this device" onchange="handleInventoryImageUpload(this)" class="min-w-0 w-full text-[10px] text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-sundari-purple/10 file:px-2 file:py-1 file:text-[10px] file:font-semibold file:text-sundari-purple"><img data-image-preview alt="Selected product preview" class="hidden h-10 w-10 shrink-0 rounded-md object-cover border border-sundari-gold/30"></div>
                                 <p data-image-status class="mt-0.5 text-[9px] text-gray-400">Choose a photo or paste a URL. Uploaded photos are compressed to fit Google Sheets.</p>
                             </div>
@@ -810,7 +810,8 @@
             if (mobileSelect) mobileSelect.value = value;
             filterInventory();
         }
-		// --- INITIALIZATION ---
+
+        // --- INITIALIZATION ---
         window.onload = async function() {
             try {
                 if (googleSheetEndpoint) {
@@ -942,8 +943,21 @@
             image.src = 'assets/default.jpeg';
         }
 
+        // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
+        function normalizeSizeKey(size) {
+            const cleaned = String(size || '').trim().toUpperCase().replace(/\s+/g, '');
+            if (cleaned === '3XL') return 'XXXL';
+            if (cleaned === '2XL') return 'XXL';
+            return cleaned;
+        }
 
-  // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
+        function findMatchingSizeKey(sizeQuantities, targetSize) {
+            if (!sizeQuantities || typeof sizeQuantities !== 'object') return null;
+            const normalizedTarget = normalizeSizeKey(targetSize);
+            if (!normalizedTarget) return null;
+            return Object.keys(sizeQuantities).find(key => normalizeSizeKey(key) === normalizedTarget) || null;
+        }
+
         function renderInventoryGrid(itemsToRender = inventory) {
             const grid = document.getElementById('product-grid');
             const emptyState = document.getElementById('empty-state');
@@ -957,13 +971,17 @@
 
             itemsToRender.forEach(product => {
                 const isOutOfStock = product.stock <= 0;
-                const hasSizeBreakdown = product.sizeQuantities && typeof product.sizeQuantities === 'object';
-                const sizeBadges = (product.sizes || []).map(size => {
+                const hasSizeBreakdown = product.sizeQuantities && typeof product.sizeQuantities === 'object' && Object.keys(product.sizeQuantities).length > 0;
+                const sizeList = (product.sizes && product.sizes.length)
+                    ? product.sizes
+                    : (hasSizeBreakdown ? Object.keys(product.sizeQuantities) : []);
+                const sizeBadges = sizeList.map(size => {
                     const availability = getSizeAvailability(product, size);
                     const sizeDisabled = availability.available <= 0;
+                    const displaySize = normalizeSizeKey(size) || String(size).trim();
                     const qtyLabel = availability.tracked ? availability.available : `${availability.available} total`;
-                    return `<span class="shrink-0 whitespace-nowrap px-1 py-0.5 rounded border text-[9px] leading-none ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${size}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
-                        <span class="font-bold">${size}</span><span>${qtyLabel}</span>
+                    return `<span class="shrink-0 whitespace-nowrap px-1 py-0.5 rounded border text-[9px] leading-none ${sizeDisabled ? 'bg-gray-100 border-gray-200 text-gray-400 line-through' : 'bg-sundari-cream border-sundari-gold/30 text-sundari-purple'}" aria-label="Size ${displaySize}, ${availability.tracked ? `${availability.available} available` : `${availability.available} total units; size split not recorded`}">
+                        <span class="font-bold">${displaySize}</span><span>${qtyLabel}</span>
                     </span>`;
                 }).join('');
                 
@@ -1006,12 +1024,82 @@
 
         // --- CART OPERATIONS ---
         function getSizeAvailability(product, size) {
-            const tracked = !!(product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, size));
-            const capacity = tracked ? Math.max(0, parseInt(product.sizeQuantities[size], 10) || 0) : Math.max(0, product.stock || 0);
-            const reservedForSize = cart.filter(item => item.id === product.id && item.selectedSize === size).reduce((sum, item) => sum + item.qty, 0);
+            const normalizedTarget = normalizeSizeKey(size);
+            const hasTrackedMap = !!(product.sizeQuantities && typeof product.sizeQuantities === 'object' && Object.keys(product.sizeQuantities).length > 0);
+            const matchedKey = hasTrackedMap ? findMatchingSizeKey(product.sizeQuantities, size) : null;
+            const productSizes = Array.isArray(product.sizes) ? product.sizes : [];
+            const hasMatchingListedSize = productSizes.some(s => normalizeSizeKey(s) === normalizedTarget);
+
+            if (hasTrackedMap) {
+                const capacity = matchedKey ? Math.max(0, parseInt(product.sizeQuantities[matchedKey], 10) || 0) : 0;
+                const reservedForSize = cart
+                    .filter(item => item.id === product.id && normalizeSizeKey(item.selectedSize) === normalizedTarget)
+                    .reduce((sum, item) => sum + item.qty, 0);
+                return { tracked: true, matchedKey, capacity, available: Math.max(0, capacity - reservedForSize) };
+            }
+
+            const capacity = hasMatchingListedSize ? Math.max(0, Number(product.stock) || 0) : 0;
             const reservedForProduct = cart.filter(item => item.id === product.id).reduce((sum, item) => sum + item.qty, 0);
-            const reserved = tracked ? reservedForSize : reservedForProduct;
-            return { tracked, capacity, available: Math.max(0, capacity - reserved) };
+            return { tracked: false, matchedKey: null, capacity, available: Math.max(0, capacity - reservedForProduct) };
+        }
+
+        function openSizeSelector(productId) {
+            const product = inventory.find(item => item.id === productId);
+            if (!product || product.stock <= 0) return;
+            document.getElementById('size-picker-product-name').textContent = product.name;
+            const options = document.getElementById('size-picker-options');
+            const hasTrackedMap = !!(product.sizeQuantities && typeof product.sizeQuantities === 'object' && Object.keys(product.sizeQuantities).length > 0);
+            const sizes = (product.sizes && product.sizes.length)
+                ? product.sizes
+                : (hasTrackedMap ? Object.keys(product.sizeQuantities) : ['Free Size']);
+            options.innerHTML = sizes.map(size => {
+                const availability = getSizeAvailability(product, size);
+                const disabled = availability.available <= 0;
+                const displaySize = normalizeSizeKey(size) || String(size).trim();
+                const safeSize = encodeURIComponent(displaySize).replace(/'/g, '%27');
+                return `<button type="button" onclick="addToCart('${product.id}', decodeURIComponent('${safeSize}'))" ${disabled ? 'disabled' : ''} class="p-3 rounded-xl border text-left transition ${disabled ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border-sundari-gold/40 text-sundari-purple hover:bg-sundari-cream'}">
+                    <span class="block font-bold">${displaySize}</span><span class="text-[11px]">${availability.tracked ? `${availability.available} available` : `${availability.available} total available`}</span>
+                </button>`;
+            }).join('');
+            document.getElementById('size-picker-note').textContent = hasTrackedMap ? 'Sizes with no stock are disabled.' : 'Size specific counts are not recorded for this older item; overall stock is used.';
+            openModal('size-selection-modal');
+        }
+
+        function addToCart(productId, selectedSize) {
+            const product = inventory.find(p => p.id === productId);
+            if (!product || product.stock <= 0) return;
+            if (!selectedSize) return openSizeSelector(productId);
+
+            const normalizedSelected = normalizeSizeKey(selectedSize) || selectedSize;
+            const availability = getSizeAvailability(product, normalizedSelected);
+            if (availability.available <= 0) return showToast(`No ${normalizedSelected} stock available.`);
+
+            const existingCartItem = cart.find(item => item.id === productId && normalizeSizeKey(item.selectedSize) === normalizedSelected);
+            if (existingCartItem) {
+                if (existingCartItem.qty < availability.capacity) {
+                    existingCartItem.qty += 1;
+                } else {
+                    showToast(`Cannot add more. Only ${availability.capacity} ${normalizedSelected} available.`);
+                    return;
+                }
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    image: getEmbeddableImageUrl(product.image),
+                    price: product.price,
+                    unitCost: product.unitCost !== null && product.unitCost !== undefined && product.unitCost !== '' && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null,
+                    selectedSize: normalizedSelected,
+                    qty: 1,
+                    maxStock: availability.capacity
+                });
+            }
+
+            saveState();
+            closeModal('size-selection-modal');
+            updateCartUI();
+            filterInventory();
+            showToast(`${product.name} (${normalizedSelected}) added to cart`);
         }
 
         function openSizeSelector(productId) {
@@ -1409,8 +1497,93 @@
             showToast(`${quantity} unit(s) returned. Vendor credit adjusted by ${formatRupees(amount)} after shipping.`);
         }
 
+        // --- SHARED IMAGE COMPRESSION & PREVIEW HELPERS ---
+        function compressAndBindImageUpload(fileInput, imageTextField, previewImg, statusEl) {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Choose an image file.');
+                fileInput.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onerror = () => showToast('Could not read that image file.');
+            reader.onload = () => {
+                const source = new Image();
+                source.onerror = () => showToast('Could not open that image file.');
+                source.onload = () => {
+                    let scale = Math.min(1, 600 / source.width, 800 / source.height);
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    let dataUrl = '';
+                    for (let attempt = 0; attempt < 12; attempt++) {
+                        canvas.width = Math.max(1, Math.round(source.width * scale));
+                        canvas.height = Math.max(1, Math.round(source.height * scale));
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+                        const quality = Math.max(0.42, 0.78 - Math.max(0, attempt - 2) * 0.06);
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        if (dataUrl.length <= 45000) break;
+                        if (attempt >= 2) scale *= 0.82;
+                    }
+                    if (dataUrl.length > 45000) {
+                        showToast('This image is too large to fit in a Google Sheets cell. Choose a smaller image.');
+                        fileInput.value = '';
+                        return;
+                    }
+                    if (imageTextField) imageTextField.value = dataUrl;
+                    if (previewImg) {
+                        previewImg.src = dataUrl;
+                        previewImg.classList.remove('hidden');
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = 'Photo compressed and ready to save.';
+                    }
+                };
+                source.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleStyleImageUrlInput(textInput) {
+            const container = textInput.closest('[data-image-container]') || textInput.closest('.inventory-style') || textInput.parentElement;
+            if (!container) return;
+            const preview = container.querySelector('[data-image-preview]');
+            const status = container.querySelector('[data-image-status]');
+            const val = textInput.value.trim();
+            if (!preview) return;
+            if (val) {
+                preview.src = getEmbeddableImageUrl(val);
+                preview.dataset.driveFallbackUrl = getDriveImageFallbackUrl(val);
+                preview.dataset.driveFallbackTried = 'false';
+                preview.classList.remove('hidden');
+                if (status) {
+                    status.textContent = val.startsWith('data:image/')
+                        ? 'Compressed photo ready to save.'
+                        : 'Previewing image link.';
+                }
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+                if (status) {
+                    status.textContent = 'Choose a photo or paste a URL. Uploaded photos are compressed to fit Google Sheets.';
+                }
+            }
+        }
+
+        function handleEditStyleImageUpload(input) {
+            const container = input.closest('[data-image-container]');
+            if (!container) return;
+            const imageField = container.querySelector('[data-edit-field="image"], [data-new-field="image"]');
+            const preview = container.querySelector('[data-image-preview]');
+            const status = container.querySelector('[data-image-status]');
+            compressAndBindImageUpload(input, imageField, preview, status);
+        }
+
         // --- EDIT PURCHASE ORDER & ADD NEW STYLES ---
         function editPurchaseStyleRow(style = {}) {
+            const rawImage = style.image && style.image !== 'assets/default.jpeg' ? style.image : '';
+            const hasImage = Boolean(rawImage);
             return `
             <div class="rounded-xl border border-sundari-gold/20 p-3 space-y-2 bg-sundari-cream/30" data-edit-new-style="true">
                 <div class="flex items-center justify-between">
@@ -1420,10 +1593,27 @@
                     </button>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label class="text-[11px] font-semibold">Style Name *<input data-new-field="name" value="${escapeHtml(style.name || '')}" placeholder="e.g. Silk Kurti" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Image URL<input data-new-field="image" value="${escapeHtml(style.image || '')}" placeholder="Direct or Google Drive link" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Unit Cost (₹) *<input data-new-field="unitCost" type="number" min="0.01" step="0.01" value="${Number(style.unitCost) || 0}" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Selling Price (₹) *<input data-new-field="price" type="number" min="0.01" step="0.01" value="${Number(style.price) || 0}" required class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Style Name *</label>
+                        <input data-new-field="name" value="${escapeHtml(style.name || '')}" placeholder="e.g. Silk Kurti" required class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
+                    <div data-image-container>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Product image (optional)</label>
+                        <input type="text" data-new-field="image" value="${escapeHtml(rawImage)}" oninput="handleStyleImageUrlInput(this)" placeholder="Paste an image or Drive URL" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                        <div class="mt-1 flex items-center gap-2">
+                            <input type="file" accept="image/*" aria-label="Choose product image from this device" onchange="handleEditStyleImageUpload(this)" class="min-w-0 w-full text-[10px] text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-sundari-purple/10 file:px-2 file:py-1 file:text-[10px] file:font-semibold file:text-sundari-purple">
+                            <img data-image-preview src="${hasImage ? getEmbeddableImageUrl(rawImage) : ''}" data-drive-fallback-url="${hasImage ? getDriveImageFallbackUrl(rawImage) : ''}" onerror="handleProductImageError(this)" alt="Selected product preview" class="${hasImage ? '' : 'hidden'} h-10 w-10 shrink-0 rounded-md object-cover border border-sundari-gold/30">
+                        </div>
+                        <p data-image-status class="mt-0.5 text-[9px] text-gray-400">Choose a photo or paste a URL. Uploaded photos are compressed to fit Google Sheets.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Unit Cost (₹) *</label>
+                        <input data-new-field="unitCost" type="number" min="0.01" step="0.01" value="${Number(style.unitCost) || 0}" required class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Selling Price (₹) *</label>
+                        <input data-new-field="price" type="number" min="0.01" step="0.01" value="${Number(style.price) || 0}" required class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
@@ -1459,7 +1649,7 @@
             }
         }
 
-      function startEditPurchaseOrder(entryId) {
+        function startEditPurchaseOrder(entryId) {
             const entry = inventoryEntries.find(item => item.id === entryId);
             if (!entry) return;
             document.getElementById('edit-purchase-id').value = entry.id;
@@ -1470,13 +1660,32 @@
             const stylesHtml = getPurchaseEntryStyles(entry).map(style => {
                 const sizeQuantities = style.sizeQuantities || {};
                 const allSizes = [...new Set([...defaultSizes, ...Object.keys(sizeQuantities)])];
-                const sizeFields = `<div class="sm:col-span-2"><p class="text-[11px] font-semibold mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${allSizes.map(size => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(sizeQuantities[size]) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>`).join('')}</div></div>`;
+                const sizeFields = `<div class="sm:col-span-2"><p class="text-[11px] font-semibold text-sundari-purple mb-1">Purchased size quantities</p><div class="grid grid-cols-2 sm:grid-cols-5 gap-2">${allSizes.map(size => `<label class="text-[10px]">${escapeHtml(size)}<input data-edit-size="${escapeHtml(size)}" type="number" min="0" step="1" value="${Number(sizeQuantities[size]) || 0}" class="mt-1 w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm"></label>`).join('')}</div></div>`;
+                const rawImage = style.image && style.image !== 'assets/default.jpeg' ? style.image : '';
+                const hasImage = Boolean(rawImage);
                 return `
-                <div class="rounded-xl border border-sundari-gold/20 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2" data-edit-style-id="${escapeHtml(style.id)}">
-                    <label class="text-[11px] font-semibold">Style name<input data-edit-field="name" value="${escapeHtml(style.name)}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Image URL<input data-edit-field="image" value="${escapeHtml(style.image || '')}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Unit cost (₹)<input data-edit-field="unitCost" type="number" min="0" step="0.01" value="${Number(style.unitCost) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
-                    <label class="text-[11px] font-semibold">Selling price (₹)<input data-edit-field="price" type="number" min="0" step="0.01" value="${Number(style.price) || 0}" class="mt-1 w-full p-2 border rounded-lg text-sm"></label>
+                <div class="rounded-xl border border-sundari-gold/20 p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-sundari-cream/20" data-edit-style-id="${escapeHtml(style.id)}">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Style name</label>
+                        <input data-edit-field="name" value="${escapeHtml(style.name)}" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
+                    <div data-image-container>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Product image (optional)</label>
+                        <input type="text" data-edit-field="image" value="${escapeHtml(rawImage)}" oninput="handleStyleImageUrlInput(this)" placeholder="Paste an image or Drive URL" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                        <div class="mt-1 flex items-center gap-2">
+                            <input type="file" accept="image/*" aria-label="Choose product image from this device" onchange="handleEditStyleImageUpload(this)" class="min-w-0 w-full text-[10px] text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-sundari-purple/10 file:px-2 file:py-1 file:text-[10px] file:font-semibold file:text-sundari-purple">
+                            <img data-image-preview src="${hasImage ? getEmbeddableImageUrl(rawImage) : ''}" data-drive-fallback-url="${hasImage ? getDriveImageFallbackUrl(rawImage) : ''}" onerror="handleProductImageError(this)" alt="Selected product preview" class="${hasImage ? '' : 'hidden'} h-10 w-10 shrink-0 rounded-md object-cover border border-sundari-gold/30">
+                        </div>
+                        <p data-image-status class="mt-0.5 text-[9px] text-gray-400">${hasImage ? 'Current image shown. Choose a photo or paste a new URL to replace.' : 'Choose a photo or paste a URL. Uploaded photos are compressed to fit Google Sheets.'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Unit cost (₹)</label>
+                        <input data-edit-field="unitCost" type="number" min="0" step="0.01" value="${Number(style.unitCost) || 0}" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-sundari-purple mb-0.5">Selling price (₹)</label>
+                        <input data-edit-field="price" type="number" min="0" step="0.01" value="${Number(style.price) || 0}" class="w-full p-2 bg-white border border-sundari-gold/40 rounded-lg text-sm">
+                    </div>
                     ${sizeFields}
                 </div>`;
             }).join('');
@@ -1658,50 +1867,12 @@
         }
 
         function handleInventoryImageUpload(input) {
-            const file = input.files && input.files[0];
-            if (!file) return;
             const card = input.closest('.inventory-style');
+            if (!card) return;
             const imageField = card.querySelector('[data-field="image"]');
             const preview = card.querySelector('[data-image-preview]');
             const status = card.querySelector('[data-image-status]');
-            if (!file.type.startsWith('image/')) {
-                showToast('Choose an image file.');
-                input.value = '';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onerror = () => showToast('Could not read that image file.');
-            reader.onload = () => {
-                const source = new Image();
-                source.onerror = () => showToast('Could not open that image file.');
-                source.onload = () => {
-                    let scale = Math.min(1, 600 / source.width, 800 / source.height);
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    let dataUrl = '';
-                    for (let attempt = 0; attempt < 12; attempt++) {
-                        canvas.width = Math.max(1, Math.round(source.width * scale));
-                        canvas.height = Math.max(1, Math.round(source.height * scale));
-                        context.clearRect(0, 0, canvas.width, canvas.height);
-                        context.drawImage(source, 0, 0, canvas.width, canvas.height);
-                        const quality = Math.max(0.42, 0.78 - Math.max(0, attempt - 2) * 0.06);
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                        if (dataUrl.length <= 45000) break;
-                        if (attempt >= 2) scale *= 0.82;
-                    }
-                    if (dataUrl.length > 45000) {
-                        showToast('This image is too large to fit in a Google Sheets cell. Choose a smaller image.');
-                        input.value = '';
-                        return;
-                    }
-                    imageField.value = dataUrl;
-                    preview.src = dataUrl;
-                    preview.classList.remove('hidden');
-                    status.textContent = 'Photo compressed and ready to save.';
-                };
-                source.src = reader.result;
-            };
-            reader.readAsDataURL(file);
+            compressAndBindImageUpload(input, imageField, preview, status);
         }
 
         function inventorySizeRow(size = '', quantity = 0) {
@@ -2176,7 +2347,7 @@
             showToast('Order status updated.');
         }
 
-       function saveOrderShippingDetails(orderId) {
+        function saveOrderShippingDetails(orderId) {
             const order = orders.find(item => item.id === orderId);
             if (!order) return;
             const courierPartner = document.getElementById('order-courier-partner')?.value.trim() || '';
@@ -2432,8 +2603,8 @@
 
             const totalQty = filtered.reduce((sum, item) => {
                 if (sizeFilter === 'all') return sum + (Number(item.stock) || 0);
-                const tracked = item.sizeQuantities && Object.prototype.hasOwnProperty.call(item.sizeQuantities, sizeFilter);
-                return sum + (tracked ? Math.max(0, Number(item.sizeQuantities[sizeFilter]) || 0) : (Number(item.stock) || 0));
+                const availability = getSizeAvailability(item, sizeFilter);
+                return sum + availability.available;
             }, 0);
             document.getElementById('stat-total-qty').innerText = totalQty;
             const mobileQtyEl = document.getElementById('stat-total-qty-mobile');
