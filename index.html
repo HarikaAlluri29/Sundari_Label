@@ -62,6 +62,63 @@
         .custom-shadow {
             box-shadow: 0 4px 18px -2px rgba(58, 16, 50, 0.08);
         }
+        .app-modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.28) !important;
+            -webkit-backdrop-filter: blur(7px) !important;
+            backdrop-filter: blur(7px) !important;
+        }
+        .app-modal-panel {
+            background-color: rgba(255, 255, 255, 0.68) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            backdrop-filter: blur(20px) !important;
+            border-color: rgba(255, 255, 255, 0.62) !important;
+            box-shadow: 0 16px 48px rgba(38, 10, 33, 0.18) !important;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(58, 16, 50, 0.42) transparent;
+            scrollbar-gutter: auto;
+            overscroll-behavior: contain;
+        }
+        .app-modal-scroll-frame {
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+        }
+        .app-modal-content-scroll {
+            min-height: 0 !important;
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+            overscroll-behavior: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(58, 16, 50, 0.42) transparent;
+            scrollbar-gutter: auto;
+        }
+        .app-modal-panel::-webkit-scrollbar,
+        .app-modal-content-scroll::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .app-modal-panel::-webkit-scrollbar-track,
+        .app-modal-content-scroll::-webkit-scrollbar-track {
+            background: transparent;
+            margin-block: 8px;
+        }
+        .app-modal-panel::-webkit-scrollbar-thumb,
+        .app-modal-content-scroll::-webkit-scrollbar-thumb {
+            background: rgba(58, 16, 50, 0.42);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 999px;
+        }
+        .app-modal-panel::-webkit-scrollbar-thumb:hover,
+        .app-modal-content-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(58, 16, 50, 0.65);
+        }
+        .app-modal-header {
+            background-color: rgba(58, 16, 50, 0.82) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            backdrop-filter: blur(16px) !important;
+            color: #fff !important;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3) !important;
+        }
         .gold-border-glow {
             border: 1px solid rgba(212, 175, 55, 0.4);
         }
@@ -257,10 +314,10 @@
         </div>
     </div>
 
-    <div id="instagram-qr-modal" class="fixed inset-0 z-[80] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('instagram-qr-modal')">
-        <div class="relative w-full max-w-md rounded-2xl bg-white p-4 sm:p-5 custom-shadow border border-sundari-gold/40">
-            <div class="mb-3 flex items-center justify-between">
-                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldDark">Follow us on Instagram</p><h3 class="font-brand font-bold text-sundari-purple">SUNDARI LABEL</h3></div>
+    <div id="instagram-qr-modal" class="app-modal-backdrop fixed inset-0 z-[80] hidden overflow-y-auto flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('instagram-qr-modal')">
+        <div class="app-modal-panel relative w-full max-w-md overflow-hidden rounded-2xl border p-4 sm:p-5">
+            <div class="app-modal-header -mx-4 -mt-4 mb-3 flex items-center justify-between px-4 py-3">
+                <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Follow us on Instagram</p><h3 class="font-brand font-bold text-sundari-gold">SUNDARI LABEL</h3></div>
                 <button type="button" onclick="closeModal('instagram-qr-modal')" aria-label="Close Instagram QR code" class="text-gray-500 hover:text-sundari-purple"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <img src="assets/sundari_label_qr.png" alt="SUNDARI LABEL Instagram QR code" class="mx-auto max-h-[70vh] w-full rounded-xl object-contain">
@@ -295,7 +352,7 @@
                             <option value="L">L</option>
                             <option value="XL">XL</option>
                             <option value="XXL">XXL</option>
-                            <option value="XXXL">XXXL</option>
+                            <option value="3XL">3XL</option>
                         </select>
                     </div>
                     <div class="relative w-40">
@@ -334,7 +391,7 @@
                         <option value="L">L</option>
                         <option value="XL">XL</option>
                         <option value="XXL">XXL</option>
-                        <option value="XXXL">XXXL</option>
+                        <option value="3XL">3XL</option>
                     </select>
                     <select id="mobile-sort-filter" onchange="setMobileSortFilter(this.value)" aria-label="Sort inventory" class="flex-1 min-w-0 px-1.5 py-1.5 text-[10px] font-semibold bg-sundari-cream/70 border border-sundari-gold/30 rounded-xl focus:outline-none focus:border-sundari-gold text-sundari-purple">
                         <option value="oldest" selected>Sort</option>
@@ -452,11 +509,11 @@
     </main>
 
     <!-- MODAL 1: CART & PLACE ORDER SLIDE-OVER -->
-    <div id="cart-modal" class="fixed inset-0 z-50 hidden overflow-hidden bg-black/50 backdrop-blur-sm transition-opacity">
+    <div id="cart-modal" class="app-modal-backdrop fixed inset-0 z-50 hidden overflow-hidden transition-opacity">
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div class="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between border-l border-sundari-gold/30">
+            <div class="app-modal-panel w-screen max-w-md flex flex-col justify-between border-l">
                 <!-- Modal Header -->
-                <div class="p-4 bg-sundari-purple text-white flex items-center justify-between border-b border-sundari-gold/40">
+                <div class="app-modal-header p-4 flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <i class="fa-solid fa-bag-shopping text-sundari-gold"></i>
                         <h3 class="font-brand text-lg font-bold">Internal Order Cart</h3>
@@ -523,9 +580,9 @@
     </div>
 
     <!-- SIZE SELECTION BEFORE ADDING A PRODUCT TO THE CART -->
-    <div id="size-selection-modal" class="fixed inset-0 z-[60] hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full custom-shadow overflow-hidden border border-sundari-gold/40">
-            <div class="bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30">
+    <div id="size-selection-modal" class="app-modal-backdrop fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+        <div class="app-modal-panel rounded-2xl max-w-sm w-full overflow-hidden border">
+            <div class="app-modal-header p-4 flex items-center justify-between">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Choose a size</p><h3 id="size-picker-product-name" class="font-bold text-sm"></h3></div>
                 <button onclick="closeModal('size-selection-modal')" aria-label="Close size picker" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
@@ -534,50 +591,56 @@
         </div>
     </div>
 
-    <div id="inventory-product-details-modal" class="fixed inset-0 z-[65] hidden bg-black/20 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('inventory-product-details-modal')">
-        <div class="w-full max-w-sm max-h-[75vh] overflow-hidden rounded-2xl border border-white/70 bg-white/70 shadow-2xl backdrop-blur-2xl">
-            <div class="flex items-center justify-between gap-3 border-b border-white/60 px-4 py-3">
-                <h3 id="inventory-product-details-title" class="min-w-0 truncate font-brand text-sm font-bold text-sundari-purple"></h3>
-                <button type="button" onclick="closeModal('inventory-product-details-modal')" aria-label="Close item details" class="shrink-0 rounded-full p-1.5 text-sundari-purple/70 hover:bg-white/70"><i class="fa-solid fa-xmark"></i></button>
+    <div id="inventory-product-details-modal" class="app-modal-backdrop fixed inset-0 z-[65] hidden flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('inventory-product-details-modal')">
+        <div class="app-modal-panel w-[60vw] sm:w-full sm:max-w-sm max-h-[75vh] overflow-hidden rounded-2xl border backdrop-blur-xl">
+            <div class="app-modal-header flex items-center justify-between gap-3 px-4 py-3">
+                <h3 id="inventory-product-details-title" class="min-w-0 truncate font-brand text-sm font-bold text-sundari-gold"></h3>
+                <button type="button" onclick="closeModal('inventory-product-details-modal')" aria-label="Close item details" class="shrink-0 rounded-full p-1.5 text-gray-300 hover:bg-white/10 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="inventory-product-details-content" class="max-h-[calc(75vh-3.25rem)] overflow-y-auto p-4 text-xs"></div>
         </div>
     </div>
 
     <!-- ORDER DETAILS POPUP -->
-    <div id="order-detail-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
-            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+    <div id="order-detail-modal" class="app-modal-backdrop fixed inset-0 z-[60] hidden overflow-hidden flex items-center justify-center p-4">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-2xl w-full max-h-[90vh] border">
+            <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Order details</p><h3 id="order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
                 <div class="flex items-center gap-2">
-                    <button id="order-detail-delete-button" type="button" class="px-2.5 py-1.5 rounded-lg border border-red-300/50 text-xs text-red-200 font-bold hover:bg-red-900/40" aria-label="Delete order"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button>
                     <button id="order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10">Edit Order Details</button>
+                    <button id="order-detail-save-button" type="button" class="hidden px-3 py-1.5 rounded-lg bg-sundari-gold text-sundari-purple text-xs font-bold hover:bg-sundari-goldLight">Save</button>
                     <button onclick="closeModal('order-detail-modal')" aria-label="Close order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
             </div>
-            <div id="order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
+            <div id="order-detail-content" class="app-modal-content-scroll p-4 sm:p-5 space-y-4"></div>
         </div>
     </div>
 
     <!-- PURCHASE ORDER DETAILS POPUP -->
-    <div id="purchase-order-detail-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
-            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+    <div id="purchase-order-detail-modal" class="app-modal-backdrop fixed inset-0 z-[60] hidden overflow-hidden flex items-center justify-center p-4">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-2xl w-full max-h-[90vh] border">
+            <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Purchase order</p><h3 id="purchase-order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
-                <button onclick="closeModal('purchase-order-detail-modal')" aria-label="Close purchase order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex items-center gap-2">
+                    <button id="purchase-order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10"><i class="fa-solid fa-pen mr-1"></i>Edit Order Details</button>
+                    <button onclick="closeModal('purchase-order-detail-modal')" aria-label="Close purchase order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
             </div>
-            <div id="purchase-order-detail-content" class="p-4 sm:p-5 space-y-4"></div>
+            <div id="purchase-order-detail-content" class="app-modal-content-scroll p-4 sm:p-5 space-y-4"></div>
         </div>
     </div>
 
     <!-- EDIT PURCHASE ORDER MODAL -->
-    <div id="purchase-order-edit-modal" class="fixed inset-0 z-[70] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
-            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+    <div id="purchase-order-edit-modal" class="app-modal-backdrop fixed inset-0 z-[70] hidden overflow-hidden flex items-center justify-center p-3">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-2xl w-full max-h-[92vh] border">
+            <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <h3 class="font-brand font-bold text-sundari-gold">Edit Purchase Order</h3>
-                <button onclick="closeModal('purchase-order-edit-modal')" aria-label="Close edit purchase order" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex items-center gap-2">
+                    <button id="purchase-order-edit-save-button" type="button" onclick="document.getElementById('purchase-order-edit-form').requestSubmit()" class="px-3 py-1.5 rounded-lg bg-sundari-gold text-sundari-purple text-xs font-bold hover:bg-sundari-goldLight">Save</button>
+                    <button onclick="closeModal('purchase-order-edit-modal')" aria-label="Close edit purchase order" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
             </div>
-            <form id="purchase-order-edit-form" onsubmit="savePurchaseOrderEdit(event)" class="p-4 space-y-3">
+            <form id="purchase-order-edit-form" onsubmit="savePurchaseOrderEdit(event)" class="app-modal-content-scroll p-4 space-y-3">
                 <input id="edit-purchase-id" type="hidden">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <label class="text-xs font-semibold text-sundari-purple">Vendor<input id="edit-purchase-vendor" required class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg text-sm"></label>
@@ -587,40 +650,39 @@
                     <div id="edit-purchase-styles" class="space-y-2"></div>
                 </div>
                 <div><div class="flex justify-between items-center mb-2"><h4 class="text-sm font-bold text-sundari-purple">Additional charges</h4><button type="button" onclick="addEditPurchaseCharge()" class="text-xs text-sundari-purple font-bold">+ Add charge</button></div><div id="edit-purchase-charges" class="space-y-2"></div></div>
-                <div class="flex justify-end gap-2"><button type="button" onclick="closeModal('purchase-order-edit-modal')" class="px-4 py-2 border rounded-lg text-sm">Cancel</button><button type="submit" class="px-4 py-2 bg-sundari-purple text-sundari-gold rounded-lg font-bold text-sm">Save Changes</button></div>
             </form>
         </div>
     </div>
 
-    <div id="sales-revenue-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
-        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
-            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+    <div id="sales-revenue-modal" class="app-modal-backdrop fixed inset-0 z-[65] hidden overflow-hidden flex items-center justify-center p-3">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-4xl w-full max-h-[92vh] border">
+            <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">All sale orders</p><h3 class="font-brand font-bold text-sundari-gold">Sale Revenue Totals</h3></div>
                 <button onclick="closeModal('sales-revenue-modal')" aria-label="Close sale revenue totals" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div id="sales-revenue-list" class="p-4 sm:p-5"></div>
+            <div id="sales-revenue-list" class="app-modal-content-scroll p-4 sm:p-5"></div>
         </div>
     </div>
 
-    <div id="vendor-ledger-modal" class="fixed inset-0 z-[65] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-1 sm:p-3">
-        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
-            <div class="sticky top-0 bg-sundari-purple p-4 text-white flex items-center justify-between border-b border-sundari-gold/30 z-10">
+    <div id="vendor-ledger-modal" class="app-modal-backdrop fixed inset-0 z-[65] hidden overflow-hidden flex items-center justify-center p-1 sm:p-3">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-5xl w-full max-h-[92vh] border">
+            <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Vendor ledger</p><h3 id="vendor-ledger-title" class="font-brand font-bold text-sundari-gold"></h3></div>
                 <button onclick="closeModal('vendor-ledger-modal')" aria-label="Close vendor ledger" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div id="vendor-ledger-content" class="p-2 sm:p-5"></div>
+            <div id="vendor-ledger-content" class="app-modal-content-scroll p-2 sm:p-5"></div>
         </div>
     </div>
 
     <!-- MODAL 2: ADD NEW INVENTORY -->
-    <div id="add-inventory-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] custom-shadow overflow-y-auto border border-sundari-gold/40 my-1 sm:my-2">
-            <div class="sticky top-0 z-10 bg-sundari-purple p-3 text-white flex justify-between items-center border-b border-sundari-gold/30">
+    <div id="add-inventory-modal" class="app-modal-backdrop fixed inset-0 z-50 hidden overflow-hidden flex items-start sm:items-center justify-center p-2 sm:p-4">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-2xl w-full max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] border my-1 sm:my-2">
+            <div class="app-modal-header sticky top-0 z-10 p-3 flex justify-between items-center">
                 <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-plus-circle mr-2"></i>Receive Vendor Stock</h3>
                 <div class="flex items-center gap-3"><button type="button" onclick="addInventoryStyle()" class="px-3 py-2 bg-sundari-gold text-sundari-purple font-bold rounded-lg text-xs whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>Add Style</button><button onclick="closeModal('add-inventory-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
             </div>
             
-            <form id="add-garment-form" onsubmit="handleAddInventory(event)" class="p-3 sm:p-4 space-y-3 text-xs">
+            <form id="add-garment-form" onsubmit="handleAddInventory(event)" class="app-modal-content-scroll p-3 sm:p-4 space-y-3 text-xs">
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block font-semibold text-sundari-purple mb-1">Vendor *</label>
@@ -699,9 +761,9 @@
     </div>
 
     <!-- SETTINGS MODAL -->
-    <div id="settings-modal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full custom-shadow overflow-hidden border border-sundari-gold/40">
-            <div class="bg-sundari-purple p-4 text-white flex justify-between items-center">
+    <div id="settings-modal" class="app-modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto flex items-center justify-center p-4">
+        <div class="app-modal-panel rounded-2xl max-w-lg w-full overflow-hidden border">
+            <div class="app-modal-header p-4 flex justify-between items-center">
                 <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-gear mr-2"></i>Settings</h3>
                 <button onclick="closeModal('settings-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
@@ -829,6 +891,7 @@
         // --- INITIALIZATION ---
         window.onload = async function() {
             try {
+                normalizeLegacySizeLabels();
                 if (googleSheetEndpoint) {
                     try {
                         const sharedData = await loadSharedData();
@@ -836,6 +899,7 @@
                         inventoryEntries = sharedData.inventoryEntries;
                         orders = sharedData.orders;
                         vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                        normalizeLegacySizeLabels();
                         localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
                         localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
                         localStorage.setItem('sundari_orders', JSON.stringify(orders));
@@ -942,6 +1006,7 @@
                 inventoryEntries = sharedData.inventoryEntries;
                 orders = sharedData.orders;
                 vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                normalizeLegacySizeLabels();
                 localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
                 localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
                 localStorage.setItem('sundari_orders', JSON.stringify(orders));
@@ -1000,9 +1065,43 @@
         // --- RENDER INVENTORY GRID (2 Columns Mobile First) ---
         function normalizeSizeKey(size) {
             const cleaned = String(size || '').trim().toUpperCase().replace(/\s+/g, '');
-            if (cleaned === '3XL') return 'XXXL';
+            if (cleaned === 'XXXL') return '3XL';
             if (cleaned === '2XL') return 'XXL';
             return cleaned;
+        }
+
+        function migrateSizeQuantityMap(sizeQuantities) {
+            if (!sizeQuantities || typeof sizeQuantities !== 'object' || Array.isArray(sizeQuantities)) return;
+            const threeXlKeys = Object.keys(sizeQuantities).filter(size => ['XXXL', '3XL'].includes(String(size).trim().toUpperCase().replace(/\s+/g, '')));
+            if (!threeXlKeys.length) return;
+            const total = threeXlKeys.reduce((sum, size) => sum + (Number(sizeQuantities[size]) || 0), 0);
+            threeXlKeys.forEach(size => delete sizeQuantities[size]);
+            sizeQuantities['3XL'] = total;
+        }
+
+        function normalizeLegacySizeLabels() {
+            const canonicalLabel = size => String(size || '').trim().toUpperCase().replace(/\s+/g, '') === 'XXXL' ? '3XL' : size;
+            const normalizeRecord = record => {
+                if (!record || typeof record !== 'object') return;
+                if (Array.isArray(record.sizes)) record.sizes = [...new Set(record.sizes.map(canonicalLabel))];
+                migrateSizeQuantityMap(record.sizeQuantities);
+                if (record.size) record.size = canonicalLabel(record.size);
+                if (record.selectedSize) record.selectedSize = canonicalLabel(record.selectedSize);
+            };
+            inventory.forEach(normalizeRecord);
+            inventoryEntries.forEach(entry => {
+                (entry.items || []).forEach(normalizeRecord);
+                (entry.returns || []).forEach(normalizeRecord);
+            });
+            cart.forEach(normalizeRecord);
+            orders.forEach(order => {
+                (order.lineItems || []).forEach(normalizeRecord);
+                if (typeof order.items === 'string') order.items = order.items.replace(/\(\s*XXXL\s*\)/gi, '(3XL)');
+            });
+            localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+            localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+            localStorage.setItem('sundari_cart', JSON.stringify(cart));
+            localStorage.setItem('sundari_orders', JSON.stringify(orders));
         }
 
         function findMatchingSizeKey(sizeQuantities, targetSize) {
@@ -1530,8 +1629,8 @@
             const chargeTotal = Number(entry.chargeTotal) || charges.reduce((sum, charge) => sum + Number(charge.amount), 0);
             const vendorCredit = getVendorCredit(entry.vendor);
             document.getElementById('purchase-order-detail-title').textContent = entry.id || 'Purchase details';
+            document.getElementById('purchase-order-detail-edit-button').onclick = () => startEditPurchaseOrder(entry.id);
             document.getElementById('purchase-order-detail-content').innerHTML = `
-                <div class="flex justify-end"><button onclick="startEditPurchaseOrder('${entry.id}')" class="px-3 py-2 rounded-lg border border-sundari-gold/50 text-xs text-sundari-purple font-bold hover:bg-sundari-cream"><i class="fa-solid fa-pen mr-1"></i>Edit Order Details</button></div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Vendor</p><p>${entry.vendor || '—'}</p></div>
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Purchase date</p><p>${formatDashboardDate(entry.date)}</p></div>
@@ -1728,7 +1827,7 @@
                         <button type="button" onclick="addEditNewStyleSize(this)" class="text-[11px] text-sundari-purple font-semibold hover:underline">+ Add size</button>
                     </div>
                     <div class="edit-new-size-list grid grid-cols-2 sm:grid-cols-5 gap-1">
-                        ${['M', 'L', 'XL', 'XXL', 'XXXL'].map(size => editNewSizeQuantityRow(size, 0)).join('')}
+                        ${['M', 'L', 'XL', 'XXL', '3XL'].map(size => editNewSizeQuantityRow(size, 0)).join('')}
                     </div>
                 </div>
             </div>`;
@@ -1763,7 +1862,7 @@
             document.getElementById('edit-purchase-vendor').value = entry.vendor || '';
             document.getElementById('edit-purchase-date').value = String(entry.date || '').slice(0, 10);
             
-            const defaultSizes = ['M', 'L', 'XL', 'XXL', 'XXXL'];
+            const defaultSizes = ['M', 'L', 'XL', 'XXL', '3XL'];
             const stylesHtml = getPurchaseEntryStyles(entry).map(style => {
                 const sizeQuantities = style.sizeQuantities || {};
                 const allSizes = [...new Set([...defaultSizes, ...Object.keys(sizeQuantities)])];
@@ -1967,7 +2066,7 @@
             const template = document.getElementById('inventory-style-template');
             const card = template.content.firstElementChild.cloneNode(true);
             const sizes = card.querySelector('.size-quantity-list');
-            ['M', 'L', 'XL', 'XXL', 'XXXL'].forEach(size => sizes.insertAdjacentHTML('beforeend', inventorySizeRow(size)));
+            ['M', 'L', 'XL', 'XXL', '3XL'].forEach(size => sizes.insertAdjacentHTML('beforeend', inventorySizeRow(size)));
             document.getElementById('inventory-style-list').appendChild(card);
             refreshInventoryStyleCards();
             updateInventoryEntryTotals();
@@ -2214,7 +2313,8 @@
             const editButton = document.getElementById('order-detail-edit-button');
             editButton.textContent = 'Edit Order Details';
             editButton.onclick = () => startEditOrder(orderId);
-            document.getElementById('order-detail-delete-button').onclick = () => deleteOrder(orderId);
+            editButton.classList.remove('hidden');
+            document.getElementById('order-detail-save-button').classList.add('hidden');
             document.getElementById('order-detail-content').innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Customer</p><p>${escapeHtml(order.customer || 'Walk-in Customer')}</p><p class="text-gray-500">${escapeHtml(order.customerNumber || 'Contact not recorded')}</p>${order.customerAddress ? `<p class="mt-1 text-gray-500">${escapeHtml(order.customerAddress)}</p>` : ''}</div>
@@ -2253,8 +2353,10 @@
             }));
             const statuses = ['Confirmed', 'In Transit', 'Delivered'];
             const editButton = document.getElementById('order-detail-edit-button');
-            editButton.textContent = 'Cancel';
-            editButton.onclick = () => openOrderDetails(orderId);
+            editButton.classList.add('hidden');
+            const headerSaveButton = document.getElementById('order-detail-save-button');
+            headerSaveButton.classList.remove('hidden');
+            headerSaveButton.onclick = () => document.querySelector('#order-detail-content form')?.requestSubmit();
             document.getElementById('order-detail-content').innerHTML = `
                 <form onsubmit="saveOrderEdit(event, '${escapeHtml(order.id)}')" class="space-y-3 text-xs">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2282,7 +2384,7 @@
                             </div>
                         </div>
                     </section>
-                    <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="openOrderDetails('${escapeHtml(order.id)}')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 font-semibold">Cancel</button><button type="submit" class="px-4 py-2 bg-sundari-purple text-sundari-gold rounded-lg font-bold">Save changes</button></div>
+                    <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="deleteOrder('${escapeHtml(order.id)}')" class="px-4 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 font-bold hover:bg-rose-100"><i class="fa-solid fa-trash mr-1.5"></i>Delete Order</button></div>
                 </form>`;
             renderOrderEditItems();
             populateOrderEditInventoryProducts();
