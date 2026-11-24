@@ -192,6 +192,10 @@
                     <i class="fa-solid fa-magnifying-glass text-xl"></i>
                 </button>
 
+                <button id="mobile-reload-data-btn" type="button" onclick="refreshSharedDataFromBackend()" aria-label="Reload data from backend" title="Reload data" class="lg:hidden p-1.5 rounded-xl text-sundari-purple hover:bg-sundari-gold/10 transition-colors focus:outline-none">
+                    <i id="mobile-reload-data-icon" class="fa-solid fa-rotate-right text-xl"></i>
+                </button>
+
                 <button id="instagram-qr-button" type="button" onclick="handleInstagramButtonClick()" aria-label="Show SUNDARI Instagram QR code. Swipe left to reveal the navigation menu." title="Instagram QR code · Swipe left to reveal menu" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
@@ -530,6 +534,16 @@
         </div>
     </div>
 
+    <div id="inventory-product-details-modal" class="fixed inset-0 z-[65] hidden bg-black/20 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)closeModal('inventory-product-details-modal')">
+        <div class="w-full max-w-sm max-h-[75vh] overflow-hidden rounded-2xl border border-white/70 bg-white/70 shadow-2xl backdrop-blur-2xl">
+            <div class="flex items-center justify-between gap-3 border-b border-white/60 px-4 py-3">
+                <h3 id="inventory-product-details-title" class="min-w-0 truncate font-brand text-sm font-bold text-sundari-purple"></h3>
+                <button type="button" onclick="closeModal('inventory-product-details-modal')" aria-label="Close item details" class="shrink-0 rounded-full p-1.5 text-sundari-purple/70 hover:bg-white/70"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="inventory-product-details-content" class="max-h-[calc(75vh-3.25rem)] overflow-y-auto p-4 text-xs"></div>
+        </div>
+    </div>
+
     <!-- ORDER DETAILS POPUP -->
     <div id="order-detail-modal" class="fixed inset-0 z-[60] hidden overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-shadow border border-sundari-gold/40">
@@ -748,6 +762,7 @@
         let vendors = JSON.parse(localStorage.getItem('sundari_vendors')) || [];
         let inventoryEntries = JSON.parse(localStorage.getItem('sundari_inventory_entries')) || [];
         let purchaseOrderSort = { key: 'date', direction: 'desc' };
+        let orderListSort = { key: 'date', direction: 'desc' };
         let cart = JSON.parse(localStorage.getItem('sundari_cart')) || [];
         let orders = JSON.parse(localStorage.getItem('sundari_orders')) || [];
         let orderEditDraftOrderId = '';
@@ -911,6 +926,45 @@
             });
         }
 
+        async function refreshSharedDataFromBackend() {
+            if (!googleSheetEndpoint) {
+                showToast('Connect Google Sheets in Settings to reload backend data.');
+                return;
+            }
+            const button = document.getElementById('mobile-reload-data-btn');
+            const icon = document.getElementById('mobile-reload-data-icon');
+            if (!button || button.disabled) return;
+            button.disabled = true;
+            icon?.classList.add('animate-spin');
+            try {
+                const sharedData = await loadSharedData();
+                inventory = sharedData.inventory;
+                inventoryEntries = sharedData.inventoryEntries;
+                orders = sharedData.orders;
+                vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+                localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+                localStorage.setItem('sundari_orders', JSON.stringify(orders));
+                localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                populateInventoryVendors();
+                populatePurchaseVendorFilter();
+                filterInventory();
+                updateCartUI();
+                renderOrdersTable();
+                renderPurchaseOrders();
+                updateStats();
+                const dashboard = document.getElementById('view-dashboard');
+                if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
+                showToast('Data reloaded from backend.');
+            } catch (error) {
+                console.error('Backend data reload error:', error);
+                showToast('Could not reload data from backend. Check your connection and try again.');
+            } finally {
+                button.disabled = false;
+                icon?.classList.remove('animate-spin');
+            }
+        }
+
         function getGoogleDriveImageId(imageUrl) {
             if (!imageUrl) return '';
             try {
@@ -1013,13 +1067,66 @@
                                     <div class="flex flex-nowrap items-center gap-1 shrink-0">${sizeBadges}</div>
                                     ${!hasSizeBreakdown ? '<span class="text-[9px] text-gray-400 shrink-0">Size split not recorded.</span>' : ''}
                                 </div>
-                                <p class="text-sm font-bold text-sundari-goldDark mt-1">Price: ₹${product.price.toLocaleString('en-IN')}</p>
+                                <div class="mt-1 flex items-center justify-between gap-2">
+                                    <p class="text-sm font-bold text-sundari-goldDark">Price: ₹${Number(product.price || 0).toLocaleString('en-IN')}</p>
+                                    <button type="button" onclick="openInventoryProductDetails(decodeURIComponent('${encodeURIComponent(String(product.id || '')).replace(/'/g, '%27')}'))" aria-label="Show details for ${escapeHtml(product.name || 'item')}" title="Item details" class="shrink-0 rounded-full p-1.5 text-sundari-purple/70 hover:bg-sundari-cream hover:text-sundari-purple focus:outline-none focus:ring-2 focus:ring-sundari-gold/60">
+                                        <i class="fa-solid fa-circle-info text-sm"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
                 grid.innerHTML += cardHtml;
             });
+        }
+
+        function openInventoryProductDetails(productId) {
+            const product = inventory.find(item => String(item.id) === String(productId));
+            if (!product) return;
+            const purchasedBySize = new Map();
+            let totalPurchased = 0;
+            let unassignedQuantity = 0;
+            inventoryEntries.forEach(entry => {
+                (entry.items || []).filter(item => String(item.id) === String(product.id)).forEach(item => {
+                    const quantities = item.sizeQuantities && typeof item.sizeQuantities === 'object' ? item.sizeQuantities : null;
+                    if (quantities && Object.keys(quantities).length) {
+                        Object.entries(quantities).forEach(([size, quantity]) => {
+                            const count = Math.max(0, Number(quantity) || 0);
+                            totalPurchased += count;
+                            purchasedBySize.set(size, (purchasedBySize.get(size) || 0) + count);
+                        });
+                    } else {
+                        const quantity = Math.max(0, Number(item.stock) || 0);
+                        totalPurchased += quantity;
+                        unassignedQuantity += quantity;
+                    }
+                });
+            });
+            const purchasedSizes = [...purchasedBySize.entries()].filter(([, quantity]) => quantity > 0);
+            if (unassignedQuantity > 0) purchasedSizes.push(['Unspecified sizes', unassignedQuantity]);
+            const sales = [];
+            orders.forEach(order => {
+                getOrderLineItems(order).filter(item => String(item.id || '') === String(product.id)).forEach(item => {
+                    sales.push({ customer: order.customer || 'Walk-in Customer', size: item.size || item.selectedSize || 'Not recorded' });
+                });
+            });
+
+            document.getElementById('inventory-product-details-title').textContent = product.name || 'Item details';
+            document.getElementById('inventory-product-details-content').innerHTML = `
+                <section>
+                    <div class="mb-2 flex items-center justify-between gap-2"><h4 class="font-bold text-sundari-purple">Purchased</h4><span class="text-[10px] font-semibold text-gray-600">${totalPurchased.toLocaleString('en-IN')} total</span></div>
+                    ${purchasedSizes.length
+                        ? `<div class="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">${purchasedSizes.map(([size, quantity]) => `<span class="shrink-0 rounded-full border border-sundari-gold/30 bg-white/60 px-2 py-1 text-[10px] text-sundari-purple"><strong>${escapeHtml(size)}</strong> · ${quantity.toLocaleString('en-IN')}</span>`).join('')}</div>`
+                        : '<p class="text-[10px] text-gray-500">No purchase quantities recorded.</p>'}
+                </section>
+                <section class="mt-4">
+                    <h4 class="mb-2 font-bold text-sundari-purple">Sales</h4>
+                    ${sales.length
+                        ? `<div class="max-h-48 divide-y divide-white/70 overflow-y-auto rounded-lg border border-white/60 bg-white/25">${sales.map(sale => `<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2.5 py-2"><span class="truncate text-gray-700">${escapeHtml(sale.customer)}</span><span class="text-right font-semibold text-sundari-purple">${escapeHtml(sale.size)}</span></div>`).join('')}</div>`
+                        : '<p class="text-[10px] text-gray-500">No sales recorded for this style.</p>'}
+                </section>`;
+            openModal('inventory-product-details-modal');
         }
 
         // --- CART OPERATIONS ---
@@ -2036,7 +2143,42 @@
                 { label: 'Purchase Value', value: totalPurchaseValue === null ? 'Incomplete cost data' : formatRupees(totalPurchaseValue), tone: 'text-amber-700 bg-amber-50' },
                 { label: 'Revenue', value: totalRevenue === null ? 'Incomplete cost data' : formatRupees(totalRevenue), tone: totalRevenue !== null && totalRevenue < 0 ? 'text-red-700 bg-red-50' : 'text-sundari-purple bg-sundari-purple/5' }
             ].map(card => `<div class="min-w-0 rounded-xl border border-sundari-gold/20 p-2 sm:p-3 ${card.tone}"><p class="text-[9px] leading-tight sm:text-[11px] font-semibold opacity-75">${card.label}</p><p class="mt-1 text-xs sm:text-lg font-bold break-words">${card.value}</p></div>`).join('');
-            container.innerHTML = renderSalesRevenueTable(orders, true, true, true);
+            const sortedOrders = [...orders].sort((a, b) => {
+                let comparison;
+                if (orderListSort.key === 'id') {
+                    comparison = String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true, sensitivity: 'base' });
+                } else {
+                    comparison = getOrderDateSortValue(a.date) - getOrderDateSortValue(b.date);
+                }
+                return orderListSort.direction === 'asc' ? comparison : -comparison;
+            });
+            container.innerHTML = `<div class="mb-2 flex items-center gap-2 sm:hidden"><span class="text-[10px] font-semibold text-gray-500">Sort by:</span><button type="button" onclick="sortOrdersList('date')" class="rounded-lg border border-sundari-gold/30 px-2 py-1 text-[10px] font-semibold text-sundari-purple">Date <i class="fa-solid ${orderListSort.key === 'date' ? (orderListSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'}"></i></button></div>${renderSalesRevenueTable(sortedOrders, true, true, true)}`;
+        }
+
+        function sortOrdersList(key) {
+            if (!['id', 'date'].includes(key)) return;
+            orderListSort = {
+                key,
+                direction: orderListSort.key === key && orderListSort.direction === 'asc' ? 'desc' : 'asc'
+            };
+            renderOrdersTable();
+        }
+
+        function getOrderDateSortValue(value) {
+            if (!value) return 0;
+            const localizedDate = String(value).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,\s*(\d{1,2}):(\d{2})(?:\s*(am|pm))?)?$/i);
+            if (localizedDate) {
+                const [, dayText, monthText, yearText, hourText, minuteText, meridiem] = localizedDate;
+                const yearNumber = Number(yearText);
+                const year = yearNumber < 100 ? 2000 + yearNumber : yearNumber;
+                let hour = Number(hourText) || 0;
+                if (meridiem) {
+                    if (meridiem.toLowerCase() === 'pm' && hour < 12) hour += 12;
+                    if (meridiem.toLowerCase() === 'am' && hour === 12) hour = 0;
+                }
+                return new Date(year, Number(monthText) - 1, Number(dayText), hour, Number(minuteText) || 0).getTime() || 0;
+            }
+            return new Date(value).getTime() || 0;
         }
 
         function getOrderLineItems(order) {
@@ -2119,6 +2261,7 @@
                         <label class="font-semibold text-sundari-purple">Customer name<input id="edit-order-customer" required value="${escapeHtml(order.customer || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
                         <label class="font-semibold text-sundari-purple">Phone<input id="edit-order-phone" value="${escapeHtml(order.customerNumber || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
                         <label class="font-semibold text-sundari-purple sm:col-span-2">Address<textarea id="edit-order-address" rows="2" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg">${escapeHtml(order.customerAddress || '')}</textarea></label>
+                        <label class="font-semibold text-sundari-purple">Order date<input id="edit-order-date" type="date" required value="${getLocalDateInputValue(new Date(getOrderDateSortValue(order.date) || Date.now()))}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
                         <label class="font-semibold text-sundari-purple">Payment method<input id="edit-order-payment" value="${escapeHtml(order.paymentType || '')}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
                         <label class="font-semibold text-sundari-purple">Order status<select id="edit-order-status" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg">${statuses.map(status => `<option value="${status}" ${getOrderStatusOption(order.status) === status ? 'selected' : ''}>${status}</option>`).join('')}</select></label>
                         <label class="font-semibold text-sundari-purple">Shipping charge (₹)<input id="edit-order-shipping" type="number" min="0" step="0.01" value="${Number(order.shipping) || 0}" class="mt-1 w-full p-2 border border-sundari-gold/40 rounded-lg"></label>
@@ -2258,6 +2401,8 @@
             order.customer = document.getElementById('edit-order-customer').value.trim();
             order.customerNumber = document.getElementById('edit-order-phone').value.trim();
             order.customerAddress = document.getElementById('edit-order-address').value.trim();
+            const orderDateValue = document.getElementById('edit-order-date').value;
+            if (orderDateValue) order.date = new Date(`${orderDateValue}T00:00:00`).toLocaleDateString('en-IN', { dateStyle: 'short' });
             order.paymentType = document.getElementById('edit-order-payment').value.trim();
             order.status = document.getElementById('edit-order-status').value;
             order.shipping = shipping;
@@ -2522,8 +2667,14 @@
             if (!includeCostDetails) return `<table class="w-full text-left text-xs min-w-[500px]">
                 <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="py-2 pr-3">Order ID</th><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Customer</th><th class="py-2 text-right">Sale value</th></tr></thead>
                 <tbody>${saleOrders.map(order => `<tr role="button" tabindex="0" onclick="openOrderDetails('${order.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetails('${order.id}')}" aria-label="View details for order ${order.id}" class="cursor-pointer hover:bg-sundari-cream/60 transition border-b border-gray-50 last:border-0"><td class="py-2 pr-3 font-bold text-sundari-purple">${escapeHtml(order.id)}</td><td class="py-2 pr-3 text-gray-500">${formatDashboardDate(order.date)}</td><td class="py-2 pr-3">${escapeHtml(order.customer || 'Walk-in Customer')}</td><td class="py-2 text-right font-bold text-sundari-goldDark">${formatRupees(getOrderRevenue(order))}</td></tr>`).join('')}</tbody></table>`;
+            const orderHeader = isOrdersList
+                ? `<button type="button" onclick="sortOrdersList('id')" class="inline-flex items-center gap-1 hover:text-sundari-goldDark">Order<i class="fa-solid ${orderListSort.key === 'id' ? (orderListSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'}"></i></button>`
+                : 'Order';
+            const dateHeader = isOrdersList
+                ? `<button type="button" onclick="sortOrdersList('date')" class="inline-flex items-center gap-1 hover:text-sundari-goldDark">Date<i class="fa-solid ${orderListSort.key === 'date' ? (orderListSort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'}"></i></button>`
+                : 'Date';
             return `<table class="w-full text-left text-xs ${isOrdersList ? 'orders-list-table' : ''}" style="min-width:${isOrdersList ? 0 : includeProductImages ? 740 : 660}px">
-                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="order-col-id py-2 pr-1 sm:pr-3">Order</th>${includeProductImages ? '<th class="order-col-image py-2 pr-1 sm:pr-3">Image</th>' : ''}<th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">Date</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">Customer</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Sale value</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Purchase value</th>${isOrdersList ? '<th class="order-col-status py-2 pr-1 text-center">Status</th>' : ''}<th class="order-col-revenue py-2 text-right">Revenue</th></tr></thead>
+                <thead><tr class="text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100"><th class="order-col-id py-2 pr-1 sm:pr-3">${orderHeader}</th>${includeProductImages ? '<th class="order-col-image py-2 pr-1 sm:pr-3">Image</th>' : ''}<th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">${dateHeader}</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3">Customer</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Sale value</th><th class="${isOrdersList ? 'hidden sm:table-cell' : ''} py-2 pr-3 text-right">Purchase value</th>${isOrdersList ? '<th class="order-col-status py-2 pr-1 text-center">Status</th>' : ''}<th class="order-col-revenue py-2 text-right">Revenue</th></tr></thead>
                 <tbody>${saleOrders.map(order => {
                     const cost = getOrderCostInfo(order);
                     const profit = getOrderProfit(order);
