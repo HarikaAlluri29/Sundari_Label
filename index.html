@@ -622,6 +622,7 @@
             <div class="app-modal-header sticky top-0 p-4 flex items-center justify-between z-10">
                 <div><p class="text-[10px] uppercase tracking-wider text-sundari-goldLight">Purchase order</p><h3 id="purchase-order-detail-title" class="font-brand font-bold text-sundari-gold"></h3></div>
                 <div class="flex items-center gap-2">
+                    <button id="purchase-order-detail-delete-button" type="button" aria-label="Delete purchase order and inventory" title="Delete purchase order and inventory" class="rounded-lg border border-rose-300/50 px-2.5 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-900/40"><i class="fa-solid fa-trash"></i><span class="hidden sm:inline ml-1">Delete</span></button>
                     <button id="purchase-order-detail-edit-button" type="button" class="px-3 py-1.5 rounded-lg border border-sundari-gold/50 text-xs text-sundari-gold font-bold hover:bg-white/10"><i class="fa-solid fa-pen mr-1"></i>Edit Order Details</button>
                     <button onclick="closeModal('purchase-order-detail-modal')" aria-label="Close purchase order details" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
@@ -830,6 +831,9 @@
         let orderEditDraftOrderId = '';
         let orderEditDraft = null;
         let googleSheetEndpoint = SHARED_GOOGLE_SHEET_ENDPOINT || localStorage.getItem('sundari_sheet_url') || '';
+        let initialBackendLoadPending = false;
+        let localChangesDuringBackendLoad = false;
+        let initialLocalDataSnapshot = null;
 
         // --- MOBILE SEARCH & FILTER HELPERS ---
         function toggleMobileSearchBar() {
@@ -889,25 +893,19 @@
         }
 
         // --- INITIALIZATION ---
-        window.onload = async function() {
+        window.onload = function() {
+            let sharedDataPromise = null;
             try {
                 normalizeLegacySizeLabels();
                 if (googleSheetEndpoint) {
-                    try {
-                        const sharedData = await loadSharedData();
-                        inventory = sharedData.inventory;
-                        inventoryEntries = sharedData.inventoryEntries;
-                        orders = sharedData.orders;
-                        vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
-                        normalizeLegacySizeLabels();
-                        localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-                        localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-                        localStorage.setItem('sundari_orders', JSON.stringify(orders));
-                        localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
-                    } catch (error) {
-                        console.error('Google Sheets load error:', error);
-                        setTimeout(() => showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.'), 300);
-                    }
+                    initialBackendLoadPending = true;
+                    localChangesDuringBackendLoad = false;
+                    initialLocalDataSnapshot = {
+                        inventory: JSON.parse(JSON.stringify(inventory)),
+                        inventoryEntries: JSON.parse(JSON.stringify(inventoryEntries)),
+                        orders: JSON.parse(JSON.stringify(orders))
+                    };
+                    sharedDataPromise = loadSharedData();
                 }
                 populateInventoryVendors();
                 populatePurchaseVendorFilter();
@@ -927,10 +925,67 @@
             } finally {
                 document.getElementById('startup-loading')?.classList.add('hidden');
             }
+            if (sharedDataPromise) {
+                sharedDataPromise.then(sharedData => {
+                    if (localChangesDuringBackendLoad && initialLocalDataSnapshot) {
+                        inventory = mergeLocalChangesWithBackend(sharedData.inventory, initialLocalDataSnapshot.inventory, inventory);
+                        inventoryEntries = mergeLocalChangesWithBackend(sharedData.inventoryEntries, initialLocalDataSnapshot.inventoryEntries, inventoryEntries);
+                        orders = mergeLocalChangesWithBackend(sharedData.orders, initialLocalDataSnapshot.orders, orders);
+                    } else {
+                        inventory = sharedData.inventory;
+                        inventoryEntries = sharedData.inventoryEntries;
+                        orders = sharedData.orders;
+                    }
+                    vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+                    normalizeLegacySizeLabels();
+                    localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
+                    localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
+                    localStorage.setItem('sundari_orders', JSON.stringify(orders));
+                    localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                    populateInventoryVendors();
+                    populatePurchaseVendorFilter();
+                    filterInventory();
+                    updateCartUI();
+                    renderOrdersTable();
+                    renderPurchaseOrders();
+                    updateStats();
+                    const dashboard = document.getElementById('view-dashboard');
+                    if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
+                }).catch(error => {
+                    console.error('Google Sheets load error:', error);
+                    showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.');
+                }).finally(() => {
+                    initialBackendLoadPending = false;
+                    initialLocalDataSnapshot = null;
+                });
+            }
         };
+
+        function mergeLocalChangesWithBackend(remoteRecords, initialLocalRecords, currentLocalRecords) {
+            const initialById = new Map(initialLocalRecords.filter(record => record && record.id).map(record => [String(record.id), JSON.stringify(record)]));
+            const currentById = new Map(currentLocalRecords.filter(record => record && record.id).map(record => [String(record.id), record]));
+            const remoteById = new Map(remoteRecords.filter(record => record && record.id).map(record => [String(record.id), record]));
+            const initialIds = new Set(initialById.keys());
+            const currentIds = new Set(currentById.keys());
+            const removedIds = new Set([...initialIds].filter(id => !currentIds.has(id)));
+            const newlyAdded = [];
+            currentById.forEach((record, id) => {
+                const changed = !initialById.has(id) || initialById.get(id) !== JSON.stringify(record);
+                if (!changed) return;
+                remoteById.set(id, record);
+                if (!initialIds.has(id) || !remoteRecords.some(remote => String(remote.id) === id)) newlyAdded.push(record);
+            });
+            const newlyAddedIds = new Set(newlyAdded.map(record => String(record.id)));
+            return [
+                ...newlyAdded,
+                ...remoteRecords.filter(record => !removedIds.has(String(record.id)) && !newlyAddedIds.has(String(record.id)))
+                    .map(record => remoteById.get(String(record.id)) || record)
+            ];
+        }
 
         // --- STORAGE SAVERS ---
         function saveState() {
+            if (initialBackendLoadPending) localChangesDuringBackendLoad = true;
             localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
             localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
             localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
@@ -1630,6 +1685,7 @@
             const vendorCredit = getVendorCredit(entry.vendor);
             document.getElementById('purchase-order-detail-title').textContent = entry.id || 'Purchase details';
             document.getElementById('purchase-order-detail-edit-button').onclick = () => startEditPurchaseOrder(entry.id);
+            document.getElementById('purchase-order-detail-delete-button').onclick = () => deletePurchaseOrderInventory(entry.id);
             document.getElementById('purchase-order-detail-content').innerHTML = `
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="rounded-xl bg-sundari-cream/60 p-3"><p class="font-bold text-sundari-purple">Vendor</p><p>${entry.vendor || '—'}</p></div>
@@ -1662,6 +1718,34 @@
                 ${(entry.returns || []).length ? `<div class="rounded-xl bg-amber-50 p-3"><h4 class="font-bold text-sm text-amber-900 mb-2">Returned to vendor</h4>${entry.returns.map(record => { const itemValue = record.productCost !== undefined ? Number(record.productCost) || 0 : (Number(record.amount) || 0) + (Number(record.shipping) || 0); return `<div class="flex justify-between gap-3 text-xs py-1"><span>${record.name} · ${record.size} × ${record.quantity}<span class="block text-[10px] text-gray-500">Item value ${formatRupees(itemValue)} − shipping ${formatRupees(Number(record.shipping) || 0)}</span></span><strong>${formatRupees(Number(record.amount) || 0)} credit</strong></div>`; }).join('')}</div>` : ''}
             `;
             openModal('purchase-order-detail-modal');
+        }
+
+        function deletePurchaseOrderInventory(entryId) {
+            const entry = inventoryEntries.find(item => String(item.id) === String(entryId));
+            if (!entry) return;
+            const purchaseItemIds = new Set((entry.items || []).map(item => String(item.id)));
+            const productsToRemove = inventory.filter(product =>
+                String(product.inventoryEntryId || '') === String(entryId) || purchaseItemIds.has(String(product.id))
+            );
+            const productIds = new Set(productsToRemove.map(product => String(product.id)));
+            const styleCount = productsToRemove.length;
+            const remainingQuantity = productsToRemove.reduce((sum, product) => sum + Math.max(0, Number(product.stock) || 0), 0);
+            const prompt = `Delete purchase order ${entry.id} and remove its ${styleCount} inventory style(s) with ${remainingQuantity} remaining unit(s)? Historical sales will be kept.`;
+            if (!window.confirm(prompt)) return;
+
+            inventory = inventory.filter(product => !productIds.has(String(product.id)) && String(product.inventoryEntryId || '') !== String(entryId));
+            inventoryEntries = inventoryEntries.filter(item => String(item.id) !== String(entryId));
+            cart = cart.filter(item => !productIds.has(String(item.id)));
+            vendors = [...new Set([...inventoryEntries.map(item => item.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+            saveState();
+            populateInventoryVendors();
+            populatePurchaseVendorFilter();
+            filterInventory();
+            updateCartUI();
+            renderPurchaseOrders();
+            closeModal('purchase-order-detail-modal');
+            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
+            showToast(`Purchase order ${entry.id} deleted. ${styleCount} style(s) and ${remainingQuantity} remaining unit(s) removed from inventory.`);
         }
 
         function updateReturnQuantityLimit(styleId) {
@@ -3068,12 +3152,21 @@
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
-            }).then(() => {
-                if (!quiet) showToast('Inventory sync request sent to Google Sheets.');
+            }).then(async () => {
+                const savedData = await loadSharedData();
+                const idsMatch = (expected, actual) => {
+                    const expectedIds = expected.map(record => String(record.id || '')).filter(Boolean).sort();
+                    const actualIds = actual.map(record => String(record.id || '')).filter(Boolean).sort();
+                    return expectedIds.length === actualIds.length && expectedIds.every((id, index) => id === actualIds[index]);
+                };
+                if (!idsMatch(inventory, savedData.inventory) || !idsMatch(inventoryEntries, savedData.inventoryEntries)) {
+                    throw new Error('Google Sheets did not save the current inventory and purchase entry list.');
+                }
+                if (!quiet) showToast('Inventory and purchase entries verified in Google Sheets.');
                 return true;
             }).catch(error => {
                 console.error('Inventory sync error:', error);
-                if (!quiet) showToast('Inventory was saved locally, but Google Sheets sync failed.');
+                showToast('Inventory was saved locally, but Google Sheets sync failed.');
                 return false;
             });
         }
