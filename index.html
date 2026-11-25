@@ -753,9 +753,12 @@
                     <div class="flex justify-between border-t border-sundari-gold/30 pt-1 text-sundari-purple"><span class="font-bold">Total vendor entry</span><strong id="inv-grand-total">₹0</strong></div>
                 </div>
 
-                <div class="sticky bottom-0 z-20 -mx-3 sm:-mx-4 mt-4 border-t border-sundari-gold/30 bg-white/95 px-3 py-3 sm:px-4 backdrop-blur flex justify-end space-x-2 shadow-[0_-6px_16px_rgba(58,16,50,0.08)]">
+                <div class="sticky bottom-0 z-20 -mx-3 sm:-mx-4 mt-4 border-t border-sundari-gold/30 bg-white/95 px-3 py-3 sm:px-4 backdrop-blur flex items-center justify-between gap-3 shadow-[0_-6px_16px_rgba(58,16,50,0.08)]">
+                    <p id="inventory-save-status" role="status" aria-live="polite" class="hidden min-w-0 text-xs font-semibold text-sundari-purple"></p>
+                    <div class="ml-auto flex shrink-0 space-x-2">
                     <button type="button" onclick="closeModal('add-inventory-modal')" class="px-4 py-2 border border-gray-300 rounded-xl text-gray-600 font-semibold hover:bg-gray-100">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow hover:bg-sundari-purpleDark transition">Save Vendor Entry</button>
+                    <button id="add-inventory-submit" type="submit" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow hover:bg-sundari-purpleDark transition">Save Vendor Entry</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -803,7 +806,7 @@
 
     <!-- NOTIFICATION TOAST -->
     <div id="toast" class="fixed top-20 right-5 z-50 hidden bg-sundari-purple text-sundari-gold px-4 py-3 rounded-xl shadow-2xl border border-sundari-gold/40 flex items-center space-x-2 transition-transform transform translate-y-[-10px]">
-        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
         <span id="toast-message" class="text-sm font-semibold">Action completed!</span>
     </div>
 
@@ -834,7 +837,7 @@
         let initialBackendLoadPending = false;
         let localChangesDuringBackendLoad = false;
         let initialLocalDataSnapshot = null;
-        let localImageCacheTrimmed = false;
+        let pendingInventorySubmission = null;
 
         // --- MOBILE SEARCH & FILTER HELPERS ---
         function toggleMobileSearchBar() {
@@ -983,40 +986,30 @@
 
         // --- STORAGE SAVERS ---
         function persistLocalState() {
-            const writeRecords = stripInlineImages => {
-                const cacheImage = image => stripInlineImages && /^data:image\//i.test(String(image || '')) ? '' : image;
-                const cacheProducts = products => products.map(product => ({ ...product, image: cacheImage(product.image) }));
-                const cachedEntries = inventoryEntries.map(entry => ({
-                    ...entry,
-                    items: (entry.items || []).map(item => ({ ...item, image: cacheImage(item.image) }))
-                }));
-                const cachedCart = cart.map(item => ({ ...item, image: cacheImage(item.image) }));
-                const cachedOrders = orders.map(order => ({
-                    ...order,
-                    lineItems: (order.lineItems || []).map(item => ({ ...item, image: cacheImage(item.image) }))
-                }));
+            // Keep inline photos in memory for Sheet sync, not duplicated in
+            // localStorage. Google Sheets is the durable image store.
+            const cacheImage = image => /^data:image\//i.test(String(image || '')) ? '' : image;
+            const cacheProducts = products => products.map(product => ({ ...product, image: cacheImage(product.image) }));
+            const cachedEntries = inventoryEntries.map(entry => ({
+                ...entry,
+                items: (entry.items || []).map(item => ({ ...item, image: cacheImage(item.image) }))
+            }));
+            const cachedCart = cart.map(item => ({ ...item, image: cacheImage(item.image) }));
+            const cachedOrders = orders.map(order => ({
+                ...order,
+                lineItems: (order.lineItems || []).map(item => ({ ...item, image: cacheImage(item.image) }))
+            }));
+            try {
                 localStorage.setItem('sundari_inventory', JSON.stringify(cacheProducts(inventory)));
                 localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
                 localStorage.setItem('sundari_inventory_entries', JSON.stringify(cachedEntries));
                 localStorage.setItem('sundari_cart', JSON.stringify(cachedCart));
                 localStorage.setItem('sundari_orders', JSON.stringify(cachedOrders));
-            };
-            try {
-                writeRecords(false);
-                localImageCacheTrimmed = false;
                 return true;
             } catch (error) {
-                console.warn('Local app storage could not save the full image cache:', error);
-                try {
-                    writeRecords(true);
-                    if (!localImageCacheTrimmed) showToast('Browser storage is full. Photos will load from Google Sheets after sync.');
-                    localImageCacheTrimmed = true;
-                    return false;
-                } catch (fallbackError) {
-                    console.error('Local app storage is full:', fallbackError);
-                    showToast('Browser storage is full. This change must sync to Google Sheets before reloading.');
-                    return false;
-                }
+                console.error('Could not save app records to browser storage:', error);
+                showToast('Browser storage is full. This change must sync to Google Sheets before reloading.', 'warning');
+                return false;
             }
         }
 
@@ -2283,6 +2276,11 @@
 
         function handleAddInventory(e) {
             e.preventDefault();
+            if (pendingInventorySubmission) {
+                if (pendingInventorySubmission.state === 'syncing') return;
+                retryPendingInventorySync();
+                return;
+            }
             const selectedVendor = document.getElementById('inv-vendor').value;
             const vendor = selectedVendor === '__new__' ? document.getElementById('inv-new-vendor').value.trim() : selectedVendor;
             const purchaseDate = document.getElementById('inv-purchase-date').value;
@@ -2318,22 +2316,88 @@
             populatePurchaseVendorFilter();
             renderPurchaseOrders();
             filterInventory();
-            closeModal('add-inventory-modal');
-            document.getElementById('add-garment-form').reset();
+            if (googleSheetEndpoint) {
+                pendingInventorySubmission = {
+                    state: 'syncing', entry,
+                    styleCount: newProducts.length,
+                    vendor,
+                    grandTotal: draft.grandTotal
+                };
+                attemptPendingInventorySync();
+            } else {
+                resetInventoryEntryForm();
+                closeModal('add-inventory-modal');
+                showToast(`${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved locally for ${vendor}. Add a Google Sheets URL in Sync Google Sheets to enable automatic sync.`);
+            }
+        }
+
+        function setInventorySubmissionUi(state) {
+            const form = document.getElementById('add-garment-form');
+            const submit = document.getElementById('add-inventory-submit');
+            const status = document.getElementById('inventory-save-status');
+            if (!form || !submit || !status) return;
+            const locked = state !== 'idle';
+            form.querySelectorAll('input, select, textarea, button').forEach(control => {
+                if (control === submit || control.matches('button[onclick*="closeModal"]')) return;
+                control.disabled = locked;
+            });
+            submit.disabled = state === 'syncing';
+            submit.innerHTML = state === 'syncing'
+                ? '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Syncing…'
+                : state === 'failed'
+                    ? '<i class="fa-solid fa-rotate-right mr-1"></i>Retry Sheet Sync'
+                    : 'Save Vendor Entry';
+            status.classList.toggle('hidden', state === 'idle');
+            status.classList.toggle('text-amber-800', state === 'failed');
+            status.classList.toggle('text-sundari-purple', state !== 'failed');
+            status.textContent = state === 'syncing'
+                ? 'Saving to Google Sheets… Please wait; this entry will not be added twice.'
+                : state === 'failed'
+                    ? 'Sync did not complete. Your entry is kept here; retry sync to finish without creating a duplicate.'
+                    : '';
+        }
+
+        function resetInventoryEntryForm() {
+            const form = document.getElementById('add-garment-form');
+            form.reset();
             document.getElementById('inv-purchase-date').value = getLocalDateInputValue();
             document.getElementById('inventory-style-list').innerHTML = '';
             document.getElementById('inventory-charge-list').innerHTML = '';
             document.getElementById('new-vendor-wrap').classList.add('hidden');
+            setInventorySubmissionUi('idle');
             addInventoryStyle();
-            if (googleSheetEndpoint) {
-                syncInventoryWithGoogleSheets(entry, true).then(sent => {
-                    showToast(sent
-                        ? `${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved for ${vendor}. Total: ${formatRupees(draft.grandTotal)} · Sync request sent.`
-                        : `Inventory saved locally, but the Google Sheets sync request failed.`);
-                });
-            } else {
-                showToast(`${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved locally for ${vendor}. Add a Google Sheets URL in Sync Google Sheets to enable automatic sync.`);
-            }
+        }
+
+        function retryPendingInventorySync() {
+            if (!pendingInventorySubmission || pendingInventorySubmission.state === 'syncing') return;
+            pendingInventorySubmission.state = 'syncing';
+            attemptPendingInventorySync();
+        }
+
+        function attemptPendingInventorySync() {
+            if (!pendingInventorySubmission) return;
+            pendingInventorySubmission.state = 'syncing';
+            setInventorySubmissionUi('syncing');
+            syncInventoryWithGoogleSheets(pendingInventorySubmission.entry, true).then(sent => {
+                if (!pendingInventorySubmission) return;
+                if (!sent) {
+                    pendingInventorySubmission.state = 'failed';
+                    setInventorySubmissionUi('failed');
+                    showToast('Google Sheets sync is still pending. Retry Sheet Sync in this form; the entry will not be duplicated.', 'warning');
+                    return;
+                }
+                const saved = pendingInventorySubmission;
+                pendingInventorySubmission = null;
+                resetInventoryEntryForm();
+                closeModal('add-inventory-modal');
+                showToast(`${saved.styleCount} style${saved.styleCount === 1 ? '' : 's'} saved and verified in Google Sheets${saved.vendor ? ` for ${saved.vendor}` : ''}.`);
+            }).catch(error => {
+                console.error('Inventory entry sync error:', error);
+                if (!pendingInventorySubmission) return;
+                pendingInventorySubmission.state = 'failed';
+                setInventorySubmissionUi('failed');
+                showToast('Google Sheets sync is still pending. Retry Sheet Sync in this form; the entry will not be duplicated.', 'warning');
+            });
         }
 
         // --- RENDER TABLES & VIEWS ---
@@ -3096,6 +3160,9 @@
         }
 
         function openModal(id) {
+            if (id === 'add-inventory-modal') {
+                setInventorySubmissionUi(pendingInventorySubmission?.state || 'idle');
+            }
             document.getElementById(id).classList.remove('hidden');
         }
 
@@ -3103,9 +3170,13 @@
             document.getElementById(id).classList.add('hidden');
         }
 
-        function showToast(msg) {
+        function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
             document.getElementById('toast-message').innerText = msg;
+            icon.className = type === 'warning'
+                ? 'fa-solid fa-triangle-exclamation text-amber-300 text-lg'
+                : 'fa-solid fa-circle-check text-emerald-400 text-lg';
             toast.classList.remove('hidden');
             setTimeout(() => {
                 toast.classList.add('hidden');
@@ -3191,7 +3262,7 @@
                 return true;
             }).catch(error => {
                 console.error('Inventory sync error:', error);
-                showToast('Inventory was saved locally, but Google Sheets sync failed.');
+                showToast('Inventory was saved locally, but Google Sheets sync failed.', 'warning');
                 return false;
             });
         }
