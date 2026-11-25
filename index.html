@@ -834,6 +834,7 @@
         let initialBackendLoadPending = false;
         let localChangesDuringBackendLoad = false;
         let initialLocalDataSnapshot = null;
+        let localImageCacheTrimmed = false;
 
         // --- MOBILE SEARCH & FILTER HELPERS ---
         function toggleMobileSearchBar() {
@@ -938,10 +939,7 @@
                     }
                     vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
                     normalizeLegacySizeLabels();
-                    localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-                    localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-                    localStorage.setItem('sundari_orders', JSON.stringify(orders));
-                    localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                    persistLocalState();
                     populateInventoryVendors();
                     populatePurchaseVendorFilter();
                     filterInventory();
@@ -984,13 +982,46 @@
         }
 
         // --- STORAGE SAVERS ---
+        function persistLocalState() {
+            const writeRecords = stripInlineImages => {
+                const cacheImage = image => stripInlineImages && /^data:image\//i.test(String(image || '')) ? '' : image;
+                const cacheProducts = products => products.map(product => ({ ...product, image: cacheImage(product.image) }));
+                const cachedEntries = inventoryEntries.map(entry => ({
+                    ...entry,
+                    items: (entry.items || []).map(item => ({ ...item, image: cacheImage(item.image) }))
+                }));
+                const cachedCart = cart.map(item => ({ ...item, image: cacheImage(item.image) }));
+                const cachedOrders = orders.map(order => ({
+                    ...order,
+                    lineItems: (order.lineItems || []).map(item => ({ ...item, image: cacheImage(item.image) }))
+                }));
+                localStorage.setItem('sundari_inventory', JSON.stringify(cacheProducts(inventory)));
+                localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                localStorage.setItem('sundari_inventory_entries', JSON.stringify(cachedEntries));
+                localStorage.setItem('sundari_cart', JSON.stringify(cachedCart));
+                localStorage.setItem('sundari_orders', JSON.stringify(cachedOrders));
+            };
+            try {
+                writeRecords(false);
+                localImageCacheTrimmed = false;
+                return true;
+            } catch (error) {
+                console.warn('Local app storage could not save the full image cache:', error);
+                try {
+                    writeRecords(true);
+                    if (!localImageCacheTrimmed) showToast('Browser storage is full. Photos will load from Google Sheets after sync.');
+                    localImageCacheTrimmed = true;
+                    return false;
+                } catch (fallbackError) {
+                    console.error('Local app storage is full:', fallbackError);
+                    showToast('Browser storage is full. This change must sync to Google Sheets before reloading.');
+                    return false;
+                }
+            }
+        }
+
         function saveState() {
             if (initialBackendLoadPending) localChangesDuringBackendLoad = true;
-            localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-            localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
-            localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-            localStorage.setItem('sundari_cart', JSON.stringify(cart));
-            localStorage.setItem('sundari_orders', JSON.stringify(orders));
             updateStats();
             const dashboard = document.getElementById('view-dashboard');
             if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
@@ -1062,10 +1093,7 @@
                 orders = sharedData.orders;
                 vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
                 normalizeLegacySizeLabels();
-                localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-                localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-                localStorage.setItem('sundari_orders', JSON.stringify(orders));
-                localStorage.setItem('sundari_vendors', JSON.stringify(vendors));
+                persistLocalState();
                 populateInventoryVendors();
                 populatePurchaseVendorFilter();
                 filterInventory();
@@ -1153,10 +1181,7 @@
                 (order.lineItems || []).forEach(normalizeRecord);
                 if (typeof order.items === 'string') order.items = order.items.replace(/\(\s*XXXL\s*\)/gi, '(3XL)');
             });
-            localStorage.setItem('sundari_inventory', JSON.stringify(inventory));
-            localStorage.setItem('sundari_inventory_entries', JSON.stringify(inventoryEntries));
-            localStorage.setItem('sundari_cart', JSON.stringify(cart));
-            localStorage.setItem('sundari_orders', JSON.stringify(orders));
+            persistLocalState();
         }
 
         function findMatchingSizeKey(sizeQuantities, targetSize) {
