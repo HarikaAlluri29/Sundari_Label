@@ -16,6 +16,12 @@ For a standalone Apps Script project, set `SPREADSHEET_ID` to the target Sheet I
 
 The first sync creates the `Inventory`, `Vendor_Entries`, and `Sales_Orders` tabs. Inventory and vendor entries are added or updated by ID; order IDs are added once and updated on retry. The script adds new order columns to an older SUNDARI `Sales_Orders` tab when its existing headers match. Other tabs with different headers are left unchanged and reported as errors rather than being replaced.
 
+## Full backup and restore
+
+In **Settings**, choose **Create Backup Document** to download a self-contained HTML document. It includes readable purchase and sales reports plus the complete app records, local app data, and embedded images in a restore payload. Keep this file in a safe location.
+
+To recover, deploy the current `Code.gs` as a new web app version, choose the backup file in **Settings**, then choose **Restore Backup** and confirm. Restore replaces the app's inventory, purchase entries, and sales orders in the connected Sheet; it restores cart and other device-only records in the browser. The app checks the restored record IDs before reporting success.
+
 ## What is stored
 
 - **Inventory:** product name and category, vendor, available stock, size types, per-size quantities, unit cost, selling price, image URL or compressed local-image data, and inventory entry ID.

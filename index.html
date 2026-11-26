@@ -779,6 +779,15 @@
                     <input type="url" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
                 </div>
 
+                <div class="rounded-xl border border-sundari-gold/30 bg-sundari-cream/70 p-3 space-y-2">
+                    <div><h4 class="font-bold text-sundari-purple">Full Backup</h4><p class="mt-1 text-[11px] text-gray-600">Create a restorable document containing purchase and sales reports, all records, and images. Keep the file somewhere safe.</p></div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="create-backup-button" type="button" onclick="createBackupDocument()" class="px-3 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl"><i class="fa-solid fa-download mr-1"></i>Create Backup Document</button>
+                        <input id="restore-backup-file" type="file" accept=".html,.json,text/html,application/json" class="min-w-0 flex-1 text-[10px]">
+                        <button type="button" onclick="restoreBackupDocument()" class="px-3 py-2 border border-sundari-gold/50 text-sundari-purple font-bold rounded-xl">Restore Backup</button>
+                    </div>
+                </div>
+
                 <div class="bg-sundari-cream p-3 rounded-xl border border-sundari-gold/30 text-[11px] space-y-1">
                     <span class="font-bold text-sundari-purple">One-time setup:</span>
                     <ol class="list-decimal pl-4 space-y-1 text-gray-600">
@@ -3184,12 +3193,227 @@
         }
 
         // --- GOOGLE SHEETS SYNC HANDLERS ---
+        function getBackupOrderItems(order, inventorySnapshot) {
+            if (Array.isArray(order.lineItems) && order.lineItems.length) return order.lineItems;
+            const parsed = String(order.items || '').split(/,\s*/).map(text => {
+                const match = text.match(/^(.*?)\s+\((.*?)\)\s+x\s+(\d+)$/i);
+                if (!match) return null;
+                const [, name, size, quantityText] = match;
+                const product = inventorySnapshot.find(item => item.name === name);
+                return {
+                    id: product?.id,
+                    name,
+                    image: product?.image || '',
+                    size,
+                    quantity: Number(quantityText),
+                    price: Number(product?.price) || 0,
+                    unitCost: product?.unitCost ?? null
+                };
+            }).filter(Boolean);
+            return parsed.length ? parsed : (order.items ? [{
+                name: order.items, image: '', size: 'Not recorded', quantity: 1,
+                price: Number(order.itemsSubtotal ?? order.total) || 0, unitCost: null
+            }] : []);
+        }
+
+        function createBackupDocument() {
+            const button = document.getElementById('create-backup-button');
+            if (button.disabled) return;
+            button.disabled = true;
+            const originalLabel = button.innerHTML;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Preparing Backup…';
+            (async () => {
+                let source = { inventory, inventoryEntries, orders };
+                if (googleSheetEndpoint && !pendingInventorySubmission) {
+                    try {
+                        source = await loadSharedData();
+                    } catch (error) {
+                        if (!window.confirm('Could not read the connected Google Sheet. Create the backup from the data currently loaded in this app instead?')) return;
+                    }
+                }
+
+                const backupAt = new Date();
+                const backupData = {
+                    format: 'SUNDARI_FULL_BACKUP',
+                    version: 1,
+                    exportedAt: backupAt.toISOString(),
+                    settings: { sheetEndpoint: googleSheetEndpoint },
+                    records: {
+                        inventory: source.inventory,
+                        inventoryEntries: source.inventoryEntries,
+                        orders: source.orders,
+                        vendors,
+                        cart,
+                        preorders: (() => {
+                            const raw = localStorage.getItem('sundari_preorders');
+                            if (raw === null) return null;
+                            try { return JSON.parse(raw); } catch (_) { return raw; }
+                        })(),
+                        additionalAppStorage: (() => {
+                            const excluded = new Set(['sundari_inventory', 'sundari_inventory_entries', 'sundari_orders', 'sundari_vendors', 'sundari_cart', 'sundari_preorders', 'sundari_sheet_url']);
+                            const result = {};
+                            for (let index = 0; index < localStorage.length; index++) {
+                                const key = localStorage.key(index);
+                                if (key?.startsWith('sundari_') && !excluded.has(key)) result[key] = localStorage.getItem(key);
+                            }
+                            return result;
+                        })()
+                    }
+                };
+                const inventorySnapshot = backupData.records.inventory;
+                const purchaseRows = backupData.records.inventoryEntries.map(entry => {
+                    const styles = (entry.items || []).map(item => {
+                        const product = inventorySnapshot.find(candidate => String(candidate.id) === String(item.id)) || {};
+                        return { ...product, ...item, image: item.image || product.image || '', sizes: item.sizes || product.sizes || [], sizeQuantities: item.sizeQuantities || product.sizeQuantities || {} };
+                    });
+                    const total = Number(entry.grandTotal) || Number(entry.itemSubtotal) + (Number(entry.chargeTotal) || 0);
+                    if (!styles.length) return `<tr><td>${escapeHtml(entry.id || '—')}</td><td>${escapeHtml(formatDashboardDate(entry.date))}</td><td>${escapeHtml(entry.vendor || '—')}</td><td colspan="4">No style details saved</td><td>${formatRupees(total)}</td></tr>`;
+                    return styles.map((style, index) => {
+                        const quantity = Number(style.stock) || 0;
+                        const sizeQuantities = style.sizeQuantities || {};
+                        const sizes = Object.entries(sizeQuantities).filter(([, qty]) => Number(qty) > 0).map(([size, qty]) => `${size} × ${qty}`).join(', ') || (style.sizes || []).join(', ') || 'Not recorded';
+                        const cost = style.unitCost === null || style.unitCost === undefined || style.unitCost === '' ? null : Number(style.unitCost);
+                        const purchaseValue = Number.isFinite(cost) ? formatRupees(cost * quantity) : 'Not recorded';
+                        const saleValue = formatRupees((Number(style.price) || 0) * quantity);
+                        const imageUrl = style.image ? getEmbeddableImageUrl(style.image) : '';
+                        const image = imageUrl ? `<img class="product-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(style.name || 'Style image')}">` : 'No image';
+                        return `<tr><td>${escapeHtml(entry.id || '—')}</td><td>${escapeHtml(formatDashboardDate(entry.date))}</td><td>${escapeHtml(entry.vendor || '—')}</td><td>${image}<br>${escapeHtml(style.name || 'Unnamed style')}</td><td>${escapeHtml(sizes)}</td><td>${purchaseValue}</td><td>${saleValue}</td><td>${index === 0 ? formatRupees(total) : '—'}</td></tr>`;
+                    }).join('');
+                }).join('');
+
+                const salesRows = backupData.records.orders.map(order => {
+                    const items = getBackupOrderItems(order, inventorySnapshot);
+                    const orderSaleValue = getOrderRevenue(order);
+                    const weights = items.map(item => Math.max(0, Number(item.price) || 0) * Math.max(1, Number(item.quantity ?? item.qty) || 1));
+                    const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+                    const rows = items.length ? items : [{}];
+                    return rows.map((item, index) => {
+                        const product = inventorySnapshot.find(candidate => String(candidate.id) === String(item.id)) || {};
+                        const quantity = Math.max(1, Number(item.quantity ?? item.qty) || 1);
+                        const saleValue = weightTotal > 0 ? orderSaleValue * (weights[index] || 0) / weightTotal : (index === 0 ? orderSaleValue : 0);
+                        const rawCost = item.unitCost === null ? null : item.unitCost !== undefined && item.unitCost !== '' ? Number(item.unitCost) : product.unitCost;
+                        const purchaseValue = rawCost === null || rawCost === undefined || rawCost === '' || !Number.isFinite(Number(rawCost)) ? null : Number(rawCost) * quantity;
+                        const revenue = purchaseValue === null ? null : saleValue - purchaseValue;
+                        const imageUrl = item.image || product.image ? getEmbeddableImageUrl(item.image || product.image) : '';
+                        const image = imageUrl ? `<img class="product-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(item.name || product.name || 'Style image')}">` : 'No image';
+                        const tracking = [order.courierPartner, order.trackingId].filter(Boolean).join(' · ') || '—';
+                        return `<tr><td>${escapeHtml(order.id || '—')}</td><td>${escapeHtml(formatDashboardDate(order.date))}</td><td>${image}</td><td>${escapeHtml(item.name || product.name || '—')}</td><td>${escapeHtml(item.size || item.selectedSize || 'Not recorded')} × ${quantity}</td><td>${escapeHtml(order.customer || '—')}</td><td>${escapeHtml(order.customerAddress || '—')}</td><td>${escapeHtml(order.customerNumber || '—')}</td><td>${formatRupees(saleValue)}</td><td>${purchaseValue === null ? 'Not recorded' : formatRupees(purchaseValue)}</td><td>${revenue === null ? 'Not recorded' : formatRupees(revenue)}</td><td>${escapeHtml(tracking)}</td></tr>`;
+                    }).join('');
+                }).join('');
+
+                const inlineData = JSON.stringify(backupData).replace(/</g, '\\u003c');
+                const embeddedBackupData = '<scr' + 'ipt type="application/json" id="sundari-backup-data">' + inlineData + '</scr' + 'ipt>';
+                const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SUNDARI Full Backup</title><style>
+                    body{font:14px Arial,sans-serif;color:#2c2a29;margin:28px}h1,h2{color:#3a1032}header{border-bottom:3px solid #d4af37;margin-bottom:22px;padding-bottom:12px}.summary{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 28px}.summary div{border:1px solid #d4af37;padding:10px 14px;border-radius:8px}section{margin:26px 0}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #d8d4d0;padding:6px;vertical-align:top}th{background:#3a1032;color:#fff;text-align:left}.product-image{max-width:68px;max-height:72px;object-fit:contain;display:block;margin-bottom:4px}footer{margin-top:30px;color:#666;font-size:11px}@page{size:A4 landscape;margin:12mm}@media print{body{margin:0}tr{break-inside:avoid}h2{break-after:avoid}}
+                    </style></head><body><header><h1>SUNDARI Full Backup</h1><p>Generated ${escapeHtml(backupAt.toLocaleString('en-IN'))}</p><p>This document contains the complete restorable app data and its images. To restore it, use Settings → Restore Backup.</p></header>
+                    <div class="summary"><div>Inventory styles: <b>${inventorySnapshot.length}</b></div><div>Purchase orders: <b>${backupData.records.inventoryEntries.length}</b></div><div>Sale orders: <b>${backupData.records.orders.length}</b></div></div>
+                    <section><h2>Purchase Orders</h2><table><thead><tr><th>PO ID</th><th>Date</th><th>Vendor</th><th>Style / Image</th><th>Sizes purchased</th><th>Purchase value</th><th>Sale value</th><th>Total PO value</th></tr></thead><tbody>${purchaseRows || '<tr><td colspan="8">No purchase orders recorded</td></tr>'}</tbody></table></section>
+                    <section><h2>Sale Orders</h2><table><thead><tr><th>Order ID</th><th>Date</th><th>Image</th><th>Style</th><th>Size / Qty</th><th>Customer</th><th>Address</th><th>Contact</th><th>Sale value</th><th>Purchase value</th><th>Revenue</th><th>Tracking details</th></tr></thead><tbody>${salesRows || '<tr><td colspan="12">No sale orders recorded</td></tr>'}</tbody></table></section>
+                    <footer>All underlying inventory, purchase, sales, cart, vendor, preorder, and extra SUNDARI app records are embedded in this file for restoration. Keep this file private and unchanged.</footer>
+                    ${embeddedBackupData}</body></html>`;
+                const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                const objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = `SUNDARI_Backup_${getLocalDateInputValue(backupAt)}.html`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+                showToast('Full backup document created with all app data and images.');
+            })().catch(error => {
+                console.error('Backup creation failed:', error);
+                showToast('Could not create the backup document.', 'warning');
+            }).finally(() => {
+                button.disabled = false;
+                button.innerHTML = originalLabel;
+            });
+        }
+
+        async function restoreBackupDocument() {
+            const input = document.getElementById('restore-backup-file');
+            const file = input.files?.[0];
+            if (!file) return showToast('Choose a SUNDARI backup document first.', 'warning');
+            let backup;
+            try {
+                const text = await file.text();
+                if (/\.json$/i.test(file.name)) {
+                    backup = JSON.parse(text);
+                } else {
+                    const documentFile = new DOMParser().parseFromString(text, 'text/html');
+                    const dataNode = documentFile.getElementById('sundari-backup-data');
+                    if (!dataNode) throw new Error('The document does not contain SUNDARI backup data.');
+                    backup = JSON.parse(dataNode.textContent);
+                }
+                const records = backup?.records;
+                if (backup?.format !== 'SUNDARI_FULL_BACKUP' || !Array.isArray(records?.inventory) || !Array.isArray(records?.inventoryEntries) || !Array.isArray(records?.orders)) {
+                    throw new Error('The backup is missing required SUNDARI data.');
+                }
+            } catch (error) {
+                console.error('Backup file could not be read:', error);
+                return showToast('This file is not a valid SUNDARI backup.', 'warning');
+            }
+
+            const records = backup.records;
+            const destination = googleSheetEndpoint ? 'the app and its connected Google Sheet' : 'this app on this device';
+            const confirmed = window.confirm(`Restore ${records.inventory.length} inventory styles, ${records.inventoryEntries.length} purchase orders, and ${records.orders.length} sale orders to ${destination}?\n\nThis replaces the current records at the destination. Photos and the other app data in the backup will also be restored.`);
+            if (!confirmed) return;
+
+            inventory = records.inventory;
+            inventoryEntries = records.inventoryEntries;
+            orders = records.orders;
+            vendors = Array.isArray(records.vendors) ? records.vendors : [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
+            cart = Array.isArray(records.cart) ? records.cart : [];
+            normalizeLegacySizeLabels();
+            persistLocalState();
+            if (records.preorders === null || records.preorders === undefined) localStorage.removeItem('sundari_preorders');
+            else localStorage.setItem('sundari_preorders', typeof records.preorders === 'string' ? records.preorders : JSON.stringify(records.preorders));
+            Object.entries(records.additionalAppStorage || {}).forEach(([key, value]) => {
+                if (key.startsWith('sundari_') && value !== null && value !== undefined) localStorage.setItem(key, String(value));
+            });
+            populateInventoryVendors();
+            populatePurchaseVendorFilter();
+            filterInventory();
+            updateCartUI();
+            renderOrdersTable();
+            renderPurchaseOrders();
+            updateStats();
+            closeModal('settings-modal');
+
+            if (!googleSheetEndpoint) {
+                showToast('Backup restored on this device. Connect Google Sheets to restore its shared copy.', 'warning');
+                return;
+            }
+            showToast('Backup restored locally. Restoring all records to Google Sheets…');
+            try {
+                await fetch(googleSheetEndpoint, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'RESTORE_DATA', data: { inventory, inventoryEntries, orders } })
+                });
+                const savedData = await loadSharedData();
+                const sameIds = (expected, actual) => {
+                    const a = expected.map(record => String(record.id || '')).sort();
+                    const b = actual.map(record => String(record.id || '')).sort();
+                    return a.length === b.length && a.every((id, index) => id === b[index]);
+                };
+                if (!sameIds(inventory, savedData.inventory) || !sameIds(inventoryEntries, savedData.inventoryEntries) || !sameIds(orders, savedData.orders)) {
+                    throw new Error('The connected sheet did not confirm all restored records.');
+                }
+                showToast('Backup restored and verified in Google Sheets.');
+            } catch (error) {
+                console.error('Google Sheets backup restore failed:', error);
+                showToast('Backup is restored on this device, but Google Sheets did not confirm it. Update the Apps Script deployment and retry restore.', 'warning');
+            }
+        }
+
         function saveSheetSettings() {
             const url = document.getElementById('google-sheet-url').value.trim();
             if (!url) {
                 showToast('Enter the Google Sheets Web App URL first.');
                 return;
             }
+            if (!window.confirm(`Save this Google Apps Script URL on this device and send the current inventory and purchase records to it?\n\n${url}`)) return;
             googleSheetEndpoint = url;
             localStorage.setItem('sundari_sheet_url', url);
             closeModal('settings-modal');
@@ -3272,6 +3496,7 @@
                 alert("Please enter a valid Google Apps Script URL first.");
                 return;
             }
+            if (!window.confirm('Sync the current inventory and purchase order records to the connected Google Sheet now?')) return;
             showToast("Sending inventory, including size quantities, to Google Sheets...");
             syncInventoryWithGoogleSheets().then(() => closeModal('settings-modal'));
         }
@@ -3282,6 +3507,7 @@
                 showToast('Enter the Google Sheets Web App URL first.');
                 return;
             }
+            if (!window.confirm(`Open a new tab to check the connection and setup for this Apps Script URL?\n\n${endpoint}`)) return;
             const statusUrl = new URL(endpoint);
             statusUrl.searchParams.set('check', '1');
             window.open(statusUrl.toString(), '_blank', 'noopener');
