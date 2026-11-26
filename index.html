@@ -951,6 +951,7 @@
                     }
                     vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
                     normalizeLegacySizeLabels();
+                    const reconciledStyles = reconcileInventoryStockFromHistory();
                     persistLocalState();
                     populateInventoryVendors();
                     populatePurchaseVendorFilter();
@@ -961,6 +962,11 @@
                     updateStats();
                     const dashboard = document.getElementById('view-dashboard');
                     if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
+                    if (reconciledStyles.length) {
+                        saveState();
+                        syncInventoryWithGoogleSheets(null, true);
+                        showToast(`Reconciled stock from recorded sales for ${reconciledStyles.length} style(s).`);
+                    }
                 }).catch(error => {
                     console.error('Google Sheets load error:', error);
                     showToast('Could not load shared data from Google Sheets. Check the web app URL and deployment access.');
@@ -1184,6 +1190,99 @@
                 if (typeof order.items === 'string') order.items = order.items.replace(/\(\s*XXXL\s*\)/gi, '(3XL)');
             });
             persistLocalState();
+        }
+
+        function reconcileInventoryStockFromHistory() {
+            const purchasedByProduct = new Map();
+            inventoryEntries.forEach(entry => {
+                (entry.items || []).forEach(item => {
+                    if (!item.id || !item.sizeQuantities || typeof item.sizeQuantities !== 'object') return;
+                    const productId = String(item.id);
+                    if (!purchasedByProduct.has(productId)) purchasedByProduct.set(productId, {});
+                    const purchased = purchasedByProduct.get(productId);
+                    Object.entries(item.sizeQuantities).forEach(([size, quantity]) => {
+                        const key = normalizeSizeKey(size);
+                        if (key) purchased[key] = (purchased[key] || 0) + Math.max(0, Number(quantity) || 0);
+                    });
+                });
+            });
+
+            const soldByProduct = new Map();
+            const incompleteHistory = new Set();
+            orders.forEach(order => getOrderLineItems(order).forEach(item => {
+                if (!item.id) {
+                    inventory.filter(product => String(product.name || '') === String(item.name || '')).forEach(product => incompleteHistory.add(String(product.id)));
+                    return;
+                }
+                const size = normalizeSizeKey(item.size || item.selectedSize);
+                const productId = String(item.id);
+                const purchased = purchasedByProduct.get(productId);
+                if (!size || !purchased || !Object.prototype.hasOwnProperty.call(purchased, size)) {
+                    incompleteHistory.add(productId);
+                    return;
+                }
+                if (!soldByProduct.has(productId)) soldByProduct.set(productId, {});
+                const sold = soldByProduct.get(productId);
+                sold[size] = (sold[size] || 0) + Math.max(1, Number(item.quantity ?? item.qty) || 1);
+            }));
+
+            const returnedByProduct = new Map();
+            inventoryEntries.forEach(entry => (entry.returns || []).forEach(record => {
+                if (!record.productId) {
+                    (entry.items || []).forEach(item => { if (item.id) incompleteHistory.add(String(item.id)); });
+                    return;
+                }
+                const size = normalizeSizeKey(record.size);
+                const productId = String(record.productId);
+                const purchased = purchasedByProduct.get(productId);
+                if (!size || !purchased || !Object.prototype.hasOwnProperty.call(purchased, size)) {
+                    incompleteHistory.add(productId);
+                    return;
+                }
+                if (!returnedByProduct.has(productId)) returnedByProduct.set(productId, {});
+                const returned = returnedByProduct.get(productId);
+                returned[size] = (returned[size] || 0) + Math.max(0, Number(record.quantity) || 0);
+            }));
+
+            const normalizeCounts = counts => Object.entries(counts || {}).reduce((result, [size, quantity]) => {
+                const key = normalizeSizeKey(size);
+                if (key) result[key] = (result[key] || 0) + Math.max(0, Number(quantity) || 0);
+                return result;
+            }, {});
+            const sameCounts = (left, right) => {
+                const a = normalizeCounts(left);
+                const b = normalizeCounts(right);
+                const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+                return keys.every(key => (a[key] || 0) === (b[key] || 0));
+            };
+            const totalOf = counts => Object.values(counts).reduce((sum, quantity) => sum + Math.max(0, Number(quantity) || 0), 0);
+            const reconciled = [];
+
+            inventory.forEach(product => {
+                const productId = String(product.id);
+                const purchased = purchasedByProduct.get(productId);
+                if (!purchased || !Object.keys(purchased).length || !product.sizeQuantities || typeof product.sizeQuantities !== 'object') return;
+                if (incompleteHistory.has(productId)) return;
+                const expected = { ...purchased };
+                const returned = returnedByProduct.get(productId) || {};
+                const sold = soldByProduct.get(productId) || {};
+                if (!Object.keys(returned).length && !Object.keys(sold).length) return;
+                Object.keys(expected).forEach(size => {
+                    expected[size] = Math.max(0, expected[size] - (returned[size] || 0) - (sold[size] || 0));
+                });
+                const current = normalizeCounts(product.sizeQuantities);
+                const expectedTotal = totalOf(expected);
+                const currentTotal = Number(product.stock) || 0;
+                const hasUnknownSize = Object.keys(current).some(size => !Object.prototype.hasOwnProperty.call(purchased, size));
+                if (hasUnknownSize) return;
+                if (!sameCounts(current, expected) || currentTotal !== expectedTotal) {
+                    product.sizeQuantities = { ...expected };
+                    product.stock = expectedTotal;
+                    reconciled.push(product.name || product.id);
+                }
+            });
+
+            return reconciled;
         }
 
         function findMatchingSizeKey(sizeQuantities, targetSize) {
