@@ -1390,74 +1390,22 @@
             showToast(`${product.name} (${normalizedSelected}) added to cart`);
         }
 
-        function openSizeSelector(productId) {
-            const product = inventory.find(item => item.id === productId);
-            if (!product || product.stock <= 0) return;
-            document.getElementById('size-picker-product-name').textContent = product.name;
-            const options = document.getElementById('size-picker-options');
-            const sizes = product.sizes && product.sizes.length ? product.sizes : ['Free Size'];
-            options.innerHTML = sizes.map(size => {
-                const availability = getSizeAvailability(product, size);
-                const disabled = availability.available <= 0;
-                const safeSize = encodeURIComponent(size).replace(/'/g, '%27');
-                return `<button type="button" onclick="addToCart('${product.id}', decodeURIComponent('${safeSize}'))" ${disabled ? 'disabled' : ''} class="p-3 rounded-xl border text-left transition ${disabled ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border-sundari-gold/40 text-sundari-purple hover:bg-sundari-cream'}">
-                    <span class="block font-bold">${size}</span><span class="text-[11px]">${availability.tracked ? `${availability.available} available` : `${availability.available} total available`}</span>
-                </button>`;
-            }).join('');
-            document.getElementById('size-picker-note').textContent = product.sizeQuantities ? 'Sizes with no stock are disabled.' : 'Size specific counts are not recorded for this older item; overall stock is used.';
-            openModal('size-selection-modal');
-        }
-
-        function addToCart(productId, selectedSize) {
-            const product = inventory.find(p => p.id === productId);
-            if (!product || product.stock <= 0) return;
-            if (!selectedSize) return openSizeSelector(productId);
-
-            const availability = getSizeAvailability(product, selectedSize);
-            if (availability.available <= 0) return showToast(`No ${selectedSize} stock available.`);
-
-            const existingCartItem = cart.find(item => item.id === productId && item.selectedSize === selectedSize);
-            if (existingCartItem) {
-                if (existingCartItem.qty < availability.capacity) {
-                    existingCartItem.qty += 1;
-                } else {
-                    showToast(`Cannot add more. Only ${availability.capacity} ${selectedSize} available.`);
-                    return;
-                }
-            } else {
-                cart.push({
-                    id: product.id,
-                    name: product.name,
-                    image: getEmbeddableImageUrl(product.image),
-                    price: product.price,
-                    unitCost: product.unitCost !== null && product.unitCost !== undefined && product.unitCost !== '' && Number.isFinite(Number(product.unitCost)) ? Number(product.unitCost) : null,
-                    selectedSize,
-                    qty: 1,
-                    maxStock: availability.capacity
-                });
-            }
-
-            saveState();
-            closeModal('size-selection-modal');
-            updateCartUI();
-            filterInventory();
-            showToast(`${product.name} (${selectedSize}) added to cart`);
-        }
-
         function updateCartQty(productId, selectedSize, change) {
-            const item = cart.find(i => i.id === productId && i.selectedSize === selectedSize);
+            const normalizedSize = normalizeSizeKey(selectedSize);
+            const item = cart.find(i => i.id === productId && normalizeSizeKey(i.selectedSize) === normalizedSize);
             if (!item) return;
             if (change > 0) {
                 const product = inventory.find(p => p.id === productId);
                 if (!product) return;
-                const sizeIsTracked = product.sizeQuantities && Object.prototype.hasOwnProperty.call(product.sizeQuantities, selectedSize);
-                const used = cart.filter(i => i.id === productId && (sizeIsTracked ? i.selectedSize === selectedSize : true)).reduce((sum, i) => sum + i.qty, 0);
-                const limit = sizeIsTracked ? (parseInt(product.sizeQuantities[selectedSize], 10) || 0) : product.stock;
+                const sizeKey = findMatchingSizeKey(product.sizeQuantities, selectedSize);
+                const sizeIsTracked = Boolean(sizeKey);
+                const used = cart.filter(i => i.id === productId && (sizeIsTracked ? normalizeSizeKey(i.selectedSize) === normalizedSize : true)).reduce((sum, i) => sum + i.qty, 0);
+                const limit = sizeIsTracked ? (parseInt(product.sizeQuantities[sizeKey], 10) || 0) : product.stock;
                 if (used >= limit) return showToast(`No more ${selectedSize} stock available.`);
             }
             item.qty += change;
             if (item.qty <= 0) {
-                cart = cart.filter(i => !(i.id === productId && i.selectedSize === selectedSize));
+                cart = cart.filter(i => !(i.id === productId && normalizeSizeKey(i.selectedSize) === normalizedSize));
             } else if (item.qty > item.maxStock) {
                 item.qty = item.maxStock;
                 showToast(`Maximum stock limit (${item.maxStock}) reached.`);
@@ -1540,9 +1488,12 @@
             cart.forEach(cartItem => {
                 const invProduct = inventory.find(p => p.id === cartItem.id);
                 if (invProduct) {
-                    invProduct.stock = Math.max(0, invProduct.stock - cartItem.qty);
-                    if (invProduct.sizeQuantities && Object.prototype.hasOwnProperty.call(invProduct.sizeQuantities, cartItem.selectedSize)) {
-                        invProduct.sizeQuantities[cartItem.selectedSize] = Math.max(0, (parseInt(invProduct.sizeQuantities[cartItem.selectedSize], 10) || 0) - cartItem.qty);
+                    const sizeKey = findMatchingSizeKey(invProduct.sizeQuantities, cartItem.selectedSize);
+                    if (sizeKey) {
+                        invProduct.sizeQuantities[sizeKey] = Math.max(0, (parseInt(invProduct.sizeQuantities[sizeKey], 10) || 0) - cartItem.qty);
+                        invProduct.stock = Object.values(invProduct.sizeQuantities).reduce((sum, quantity) => sum + Math.max(0, Number(quantity) || 0), 0);
+                    } else {
+                        invProduct.stock = Math.max(0, (Number(invProduct.stock) || 0) - cartItem.qty);
                     }
                 }
             });
@@ -2714,7 +2665,7 @@
                 const quantities = new Map();
                 lines.forEach(item => {
                     if (!item.id) return;
-                    const size = String(item.size || item.selectedSize || 'Free Size');
+                    const size = normalizeSizeKey(item.size || item.selectedSize || 'Free Size');
                     const key = `${item.id}\u0000${size}`;
                     quantities.set(key, (quantities.get(key) || 0) + Math.max(1, Number(item.quantity ?? item.qty) || 1));
                 });
@@ -2746,16 +2697,23 @@
                 const sizeQuantities = currentSizes ? { ...currentSizes } : null;
                 if (sizeQuantities) {
                     for (const [size, delta] of sizeDeltas) {
-                        if (!Object.prototype.hasOwnProperty.call(sizeQuantities, size)) continue;
-                        const nextQuantity = (Number(sizeQuantities[size]) || 0) - delta;
+                        const sizeKey = findMatchingSizeKey(sizeQuantities, size);
+                        if (!sizeKey) {
+                            showToast(`Could not match ${size} stock for ${product.name}. Refresh inventory and try again.`);
+                            return null;
+                        }
+                        const nextQuantity = (Number(sizeQuantities[sizeKey]) || 0) - delta;
                         if (nextQuantity < 0) {
                             showToast(`Not enough ${size} stock remains for ${product.name}. Refresh inventory and try again.`);
                             return null;
                         }
-                        sizeQuantities[size] = nextQuantity;
+                        sizeQuantities[sizeKey] = nextQuantity;
                     }
                 }
-                updates.push({ product, stock, sizeQuantities });
+                const updatedStock = sizeQuantities
+                    ? Object.values(sizeQuantities).reduce((sum, quantity) => sum + Math.max(0, Number(quantity) || 0), 0)
+                    : stock;
+                updates.push({ product, stock: updatedStock, sizeQuantities });
             }
             return updates;
         }
@@ -3482,6 +3440,21 @@
                 if (!idsMatch(inventory, savedData.inventory) || !idsMatch(inventoryEntries, savedData.inventoryEntries)) {
                     throw new Error('Google Sheets did not save the current inventory and purchase entry list.');
                 }
+                const savedInventoryById = new Map(savedData.inventory.map(product => [String(product.id), product]));
+                const sizeCountsMatch = inventory.every(product => {
+                    const saved = savedInventoryById.get(String(product.id));
+                    if (!saved || Number(saved.stock) !== Number(product.stock)) return false;
+                    const normalizedCounts = counts => {
+                        const merged = Object.entries(counts || {}).reduce((result, [size, quantity]) => {
+                            const key = normalizeSizeKey(size);
+                            if (key) result[key] = (result[key] || 0) + Math.max(0, Number(quantity) || 0);
+                            return result;
+                        }, {});
+                        return Object.entries(merged).sort(([left], [right]) => left.localeCompare(right));
+                    };
+                    return JSON.stringify(normalizedCounts(saved.sizeQuantities)) === JSON.stringify(normalizedCounts(product.sizeQuantities));
+                });
+                if (!sizeCountsMatch) throw new Error('Google Sheets stock quantities did not match the app after sync.');
                 if (!quiet) showToast('Inventory and purchase entries verified in Google Sheets.');
                 return true;
             }).catch(error => {
