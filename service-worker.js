@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sundari-app-v5';
+const CACHE_NAME = 'sundari-app-v6';
 const SHELL_FILES = [
   './',
   './index.html',

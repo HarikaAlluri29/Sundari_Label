@@ -1135,12 +1135,14 @@
 
         function getEmbeddableImageUrl(imageUrl) {
             const fileId = getGoogleDriveImageId(imageUrl);
-            return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200` : (imageUrl || 'assets/default.jpeg');
+            // Serve Drive images from Google's image host. Safari/iOS PWA can fail
+            // to render the thumbnail endpoint's redirect even when Android works.
+            return fileId ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w1200` : (imageUrl || 'assets/default.jpeg');
         }
 
         function getDriveImageFallbackUrl(imageUrl) {
             const fileId = getGoogleDriveImageId(imageUrl);
-            return fileId ? `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}` : '';
+            return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200` : '';
         }
 
         function handleProductImageError(image) {
@@ -1148,6 +1150,14 @@
                 image.dataset.driveFallbackTried = 'true';
                 image.src = image.dataset.driveFallbackUrl;
                 return;
+            }
+            if (image.dataset.driveFallbackTried === 'true' && image.dataset.driveDirectTried !== 'true') {
+                const fileId = getGoogleDriveImageId(image.dataset.driveFallbackUrl || image.src);
+                if (fileId) {
+                    image.dataset.driveDirectTried = 'true';
+                    image.src = `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+                    return;
+                }
             }
             image.onerror = null;
             image.src = 'assets/default.jpeg';
