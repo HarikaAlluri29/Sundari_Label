@@ -1462,10 +1462,12 @@
             const product = inventory.find(item => String(item.id) === String(productId));
             if (!product) return;
             const purchasedBySize = new Map();
+            const purchaseOrderIds = new Set();
             let totalPurchased = 0;
             let unassignedQuantity = 0;
             inventoryEntries.forEach(entry => {
                 (entry.items || []).filter(item => String(item.id) === String(product.id)).forEach(item => {
+                    if (entry.id) purchaseOrderIds.add(String(entry.id));
                     const quantities = item.sizeQuantities && typeof item.sizeQuantities === 'object' ? item.sizeQuantities : null;
                     if (quantities && Object.keys(quantities).length) {
                         Object.entries(quantities).forEach(([size, quantity]) => {
@@ -1482,17 +1484,18 @@
             });
             const purchasedSizes = [...purchasedBySize.entries()].filter(([, quantity]) => quantity > 0);
             if (unassignedQuantity > 0) purchasedSizes.push(['Unspecified sizes', unassignedQuantity]);
+            if (!purchaseOrderIds.size && product.inventoryEntryId) purchaseOrderIds.add(String(product.inventoryEntryId));
             const sales = [];
             orders.forEach(order => {
                 getOrderLineItems(order).filter(item => String(item.id || '') === String(product.id)).forEach(item => {
-                    sales.push({ customer: order.customer || 'Walk-in Customer', size: item.size || item.selectedSize || 'Not recorded' });
+                    sales.push({ orderId: order.id || '', customer: order.customer || 'Walk-in Customer', size: item.size || item.selectedSize || 'Not recorded' });
                 });
             });
 
             document.getElementById('inventory-product-details-title').textContent = product.name || 'Item details';
             document.getElementById('inventory-product-details-content').innerHTML = `
                 <section>
-                    <div class="mb-2 flex items-center justify-between gap-2"><h4 class="font-bold text-sundari-purple">Purchased</h4><span class="text-[10px] font-semibold text-gray-600">${totalPurchased.toLocaleString('en-IN')} total</span></div>
+                    <div class="mb-2 flex items-center justify-between gap-2"><div class="flex min-w-0 flex-wrap items-center gap-1.5"><h4 class="font-bold text-sundari-purple">Purchased</h4>${[...purchaseOrderIds].map(id => `<span class="shrink-0 rounded-full border border-sundari-gold/40 bg-white/60 px-2 py-0.5 text-[9px] font-semibold text-sundari-purple">${escapeHtml(id)}</span>`).join('')}</div><span class="shrink-0 text-[10px] font-semibold text-gray-600">${totalPurchased.toLocaleString('en-IN')} total</span></div>
                     ${purchasedSizes.length
                         ? `<div class="flex flex-nowrap gap-1.5 overflow-x-auto pb-1">${purchasedSizes.map(([size, quantity]) => `<span class="shrink-0 rounded-full border border-sundari-gold/30 bg-white/60 px-2 py-1 text-[10px] text-sundari-purple"><strong>${escapeHtml(size)}</strong> · ${quantity.toLocaleString('en-IN')}</span>`).join('')}</div>`
                         : '<p class="text-[10px] text-gray-500">No purchase quantities recorded.</p>'}
@@ -1500,7 +1503,7 @@
                 <section class="mt-4">
                     <h4 class="mb-2 font-bold text-sundari-purple">Sales</h4>
                     ${sales.length
-                        ? `<div class="max-h-48 divide-y divide-white/70 overflow-y-auto rounded-lg border border-white/60 bg-white/25">${sales.map(sale => `<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2.5 py-2"><span class="truncate text-gray-700">${escapeHtml(sale.customer)}</span><span class="text-right font-semibold text-sundari-purple">${escapeHtml(sale.size)}</span></div>`).join('')}</div>`
+                        ? `<div class="max-h-48 divide-y divide-white/70 overflow-y-auto rounded-lg border border-white/60 bg-white/25">${sales.map(sale => `<div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-2.5 py-2"><span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-gray-700"><span class="max-w-full truncate">${escapeHtml(sale.customer)}</span>${sale.orderId ? `<span class="shrink-0 rounded-full border border-sundari-gold/40 bg-white/50 px-1.5 py-0.5 text-[9px] font-semibold text-sundari-purple">${escapeHtml(sale.orderId)}</span>` : ''}</span><span class="text-right font-semibold text-sundari-purple">${escapeHtml(sale.size)}</span></div>`).join('')}</div>`
                         : '<p class="text-[10px] text-gray-500">No sales recorded for this style.</p>'}
                 </section>`;
             openModal('inventory-product-details-modal');
