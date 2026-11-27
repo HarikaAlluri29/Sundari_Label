@@ -253,6 +253,10 @@
                     <i id="mobile-reload-data-icon" class="fa-solid fa-rotate-right text-xl"></i>
                 </button>
 
+                <button id="backend-sync-btn" type="button" onclick="syncPendingDataToBackend()" aria-label="Update backend with pending changes" title="Update backend" class="hidden p-1.5 rounded-xl text-amber-700 hover:bg-amber-100 transition-colors focus:outline-none focus:ring-2 focus:ring-sundari-gold/60">
+                    <i id="backend-sync-icon" class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </button>
+
                 <button id="instagram-qr-button" type="button" onclick="handleInstagramButtonClick()" aria-label="Show SUNDARI Instagram QR code. Swipe left to reveal the navigation menu." title="Instagram QR code · Swipe left to reveal menu" class="p-1.5 rounded-xl hover:bg-sundari-gold/10 transition-colors focus:outline-none">
                     <i class="fa-brands fa-instagram bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent text-3xl"></i>
                 </button>
@@ -846,7 +850,9 @@
         let initialBackendLoadPending = false;
         let localChangesDuringBackendLoad = false;
         let initialLocalDataSnapshot = null;
-        let pendingInventorySubmission = null;
+        let backendSyncDirty = false;
+        let backendSyncInProgress = false;
+        let backendSyncBaseFingerprint = JSON.stringify({ inventory, inventoryEntries, orders });
 
         // --- MOBILE SEARCH & FILTER HELPERS ---
         function toggleMobileSearchBar() {
@@ -940,6 +946,7 @@
             }
             if (sharedDataPromise) {
                 sharedDataPromise.then(sharedData => {
+                    backendSyncBaseFingerprint = JSON.stringify({ inventory: sharedData.inventory, inventoryEntries: sharedData.inventoryEntries, orders: sharedData.orders });
                     if (localChangesDuringBackendLoad && initialLocalDataSnapshot) {
                         inventory = mergeLocalChangesWithBackend(sharedData.inventory, initialLocalDataSnapshot.inventory, inventory);
                         inventoryEntries = mergeLocalChangesWithBackend(sharedData.inventoryEntries, initialLocalDataSnapshot.inventoryEntries, inventoryEntries);
@@ -951,6 +958,7 @@
                     }
                     vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
                     normalizeLegacySizeLabels();
+                    refreshBackendSyncState();
                     const reconciledStyles = reconcileInventoryStockFromHistory();
                     persistLocalState();
                     populateInventoryVendors();
@@ -964,7 +972,6 @@
                     if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
                     if (reconciledStyles.length) {
                         saveState();
-                        syncInventoryWithGoogleSheets(null, true);
                         showToast(`Reconciled stock from recorded sales for ${reconciledStyles.length} style(s).`);
                     }
                 }).catch(error => {
@@ -1030,6 +1037,8 @@
 
         function saveState() {
             if (initialBackendLoadPending) localChangesDuringBackendLoad = true;
+            persistLocalState();
+            refreshBackendSyncState();
             updateStats();
             const dashboard = document.getElementById('view-dashboard');
             if (dashboard && !dashboard.classList.contains('hidden')) renderDashboard();
@@ -1037,6 +1046,82 @@
             if (purchaseView && !purchaseView.classList.contains('hidden')) renderPurchaseOrders();
             const ordersView = document.getElementById('view-orders');
             if (ordersView && !ordersView.classList.contains('hidden')) renderOrdersTable();
+        }
+
+        function getBackendSyncFingerprint(data = { inventory, inventoryEntries, orders }) {
+            return JSON.stringify({ inventory: data.inventory, inventoryEntries: data.inventoryEntries, orders: data.orders });
+        }
+
+        function refreshBackendSyncState() {
+            setBackendSyncDirty(getBackendSyncFingerprint() !== backendSyncBaseFingerprint);
+        }
+
+        function setBackendSyncDirty(dirty) {
+            backendSyncDirty = Boolean(dirty);
+            const button = document.getElementById('backend-sync-btn');
+            const icon = document.getElementById('backend-sync-icon');
+            if (!button || !icon) return;
+            button.classList.toggle('hidden', !backendSyncDirty && !backendSyncInProgress);
+            button.disabled = backendSyncInProgress;
+            icon.classList.toggle('fa-spin', backendSyncInProgress);
+            icon.classList.toggle('fa-cloud-arrow-up', !backendSyncInProgress);
+            icon.classList.toggle('fa-spinner', backendSyncInProgress);
+            button.title = backendSyncInProgress ? 'Updating backend…' : 'Update backend';
+            button.setAttribute('aria-label', backendSyncInProgress ? 'Updating backend' : 'Update backend with pending changes');
+        }
+
+        async function syncPendingDataToBackend() {
+            if (!googleSheetEndpoint) {
+                showToast('Connect Google Sheets in Settings before syncing.');
+                return;
+            }
+            if (!backendSyncDirty || backendSyncInProgress) return;
+            const payloadData = {
+                inventory: JSON.parse(JSON.stringify(inventory)),
+                inventoryEntries: JSON.parse(JSON.stringify(inventoryEntries)),
+                orders: JSON.parse(JSON.stringify(orders))
+            };
+            const snapshot = getBackendSyncFingerprint(payloadData);
+            backendSyncInProgress = true;
+            setBackendSyncDirty(true);
+            showToast('Updating inventory, purchases, and sales in the backend…');
+            try {
+                await fetch(googleSheetEndpoint, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'RESTORE_DATA', data: payloadData })
+                });
+                const saved = await loadSharedData();
+                const idsMatch = (expected, actual) => {
+                    const a = expected.map(record => String(record.id || '')).filter(Boolean).sort();
+                    const b = actual.map(record => String(record.id || '')).filter(Boolean).sort();
+                    return a.length === b.length && a.every((id, index) => id === b[index]);
+                };
+                const savedById = new Map(saved.inventory.map(product => [String(product.id), product]));
+                const stockMatches = payloadData.inventory.every(product => {
+                    const remote = savedById.get(String(product.id));
+                    if (!remote || Number(remote.stock) !== Number(product.stock)) return false;
+                    const normalizeCounts = counts => Object.entries(counts || {}).reduce((result, [size, quantity]) => {
+                        const key = normalizeSizeKey(size);
+                        if (key) result[key] = (result[key] || 0) + Math.max(0, Number(quantity) || 0);
+                        return result;
+                    }, {});
+                    return JSON.stringify(Object.entries(normalizeCounts(remote.sizeQuantities)).sort()) === JSON.stringify(Object.entries(normalizeCounts(product.sizeQuantities)).sort());
+                });
+                if (!idsMatch(payloadData.inventory, saved.inventory) || !idsMatch(payloadData.inventoryEntries, saved.inventoryEntries) || !idsMatch(payloadData.orders, saved.orders) || !stockMatches) {
+                    throw new Error('Backend data did not match the current inventory and order records.');
+                }
+                backendSyncBaseFingerprint = snapshot;
+                backendSyncDirty = getBackendSyncFingerprint() !== snapshot;
+                showToast(backendSyncDirty ? 'Backend update finished. New changes are still waiting to sync.' : 'All changes were updated and verified in the backend.');
+            } catch (error) {
+                console.error('Backend sync failed:', error);
+                backendSyncDirty = true;
+                showToast('Backend update did not complete. Your changes are saved here; tap the cloud icon to retry.', 'warning');
+            } finally {
+                backendSyncInProgress = false;
+                setBackendSyncDirty(backendSyncDirty);
+            }
         }
 
         function nextSequentialId(prefix, records) {
@@ -1096,12 +1181,14 @@
             icon?.classList.add('animate-spin');
             try {
                 const sharedData = await loadSharedData();
+                backendSyncBaseFingerprint = getBackendSyncFingerprint(sharedData);
                 inventory = sharedData.inventory;
                 inventoryEntries = sharedData.inventoryEntries;
                 orders = sharedData.orders;
                 vendors = [...new Set([...inventoryEntries.map(entry => entry.vendor), ...inventory.map(item => item.vendor)].filter(Boolean))];
                 normalizeLegacySizeLabels();
                 persistLocalState();
+                refreshBackendSyncState();
                 populateInventoryVendors();
                 populatePurchaseVendorFilter();
                 filterInventory();
@@ -1643,10 +1730,6 @@
             orders.unshift(newOrder);
 
             // 3. Optional Google Sheets Push
-            if (googleSheetEndpoint) {
-                pushOrderToGoogleSheet(newOrder);
-            }
-
             // Reset Cart & Close Modal
             cart = [];
             document.getElementById('order-customer-name').value = '';
@@ -1658,7 +1741,6 @@
             updateCartUI();
             filterInventory();
             renderOrdersTable();
-            syncInventoryWithGoogleSheets(null, true);
             toggleCartModal();
             showToast(`Order ${newOrder.id} confirmed & stock updated!`);
         }
@@ -1831,7 +1913,6 @@
             updateCartUI();
             renderPurchaseOrders();
             closeModal('purchase-order-detail-modal');
-            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
             showToast(`Purchase order ${entry.id} deleted. ${styleCount} style(s) and ${remainingQuantity} remaining unit(s) removed from inventory.`);
         }
 
@@ -1870,7 +1951,6 @@
             saveState();
             filterInventory();
             openPurchaseOrderDetails(entryId);
-            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
             showToast(`${quantity} unit(s) returned. Vendor credit adjusted by ${formatRupees(amount)} after shipping.`);
         }
 
@@ -2220,7 +2300,6 @@
             renderPurchaseOrders();
             filterInventory();
             closeModal('purchase-order-edit-modal');
-            if (googleSheetEndpoint) syncInventoryWithGoogleSheets(null, true);
             showToast(`Purchase order ${entry.id} updated successfully.`);
         }
 
@@ -2345,11 +2424,6 @@
 
         function handleAddInventory(e) {
             e.preventDefault();
-            if (pendingInventorySubmission) {
-                if (pendingInventorySubmission.state === 'syncing') return;
-                retryPendingInventorySync();
-                return;
-            }
             const selectedVendor = document.getElementById('inv-vendor').value;
             const vendor = selectedVendor === '__new__' ? document.getElementById('inv-new-vendor').value.trim() : selectedVendor;
             const purchaseDate = document.getElementById('inv-purchase-date').value;
@@ -2385,19 +2459,11 @@
             populatePurchaseVendorFilter();
             renderPurchaseOrders();
             filterInventory();
-            if (googleSheetEndpoint) {
-                pendingInventorySubmission = {
-                    state: 'syncing', entry,
-                    styleCount: newProducts.length,
-                    vendor,
-                    grandTotal: draft.grandTotal
-                };
-                attemptPendingInventorySync();
-            } else {
-                resetInventoryEntryForm();
-                closeModal('add-inventory-modal');
-                showToast(`${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved locally for ${vendor}. Add a Google Sheets URL in Sync Google Sheets to enable automatic sync.`);
-            }
+            resetInventoryEntryForm();
+            closeModal('add-inventory-modal');
+            showToast(googleSheetEndpoint
+                ? `${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved here. Tap the cloud icon in the header to update the backend.`
+                : `${newProducts.length} style${newProducts.length === 1 ? '' : 's'} saved here. Connect Google Sheets in Settings to sync.`);
         }
 
         function setInventorySubmissionUi(state) {
@@ -2435,38 +2501,6 @@
             document.getElementById('new-vendor-wrap').classList.add('hidden');
             setInventorySubmissionUi('idle');
             addInventoryStyle();
-        }
-
-        function retryPendingInventorySync() {
-            if (!pendingInventorySubmission || pendingInventorySubmission.state === 'syncing') return;
-            pendingInventorySubmission.state = 'syncing';
-            attemptPendingInventorySync();
-        }
-
-        function attemptPendingInventorySync() {
-            if (!pendingInventorySubmission) return;
-            pendingInventorySubmission.state = 'syncing';
-            setInventorySubmissionUi('syncing');
-            syncInventoryWithGoogleSheets(pendingInventorySubmission.entry, true).then(sent => {
-                if (!pendingInventorySubmission) return;
-                if (!sent) {
-                    pendingInventorySubmission.state = 'failed';
-                    setInventorySubmissionUi('failed');
-                    showToast('Google Sheets sync is still pending. Retry Sheet Sync in this form; the entry will not be duplicated.', 'warning');
-                    return;
-                }
-                const saved = pendingInventorySubmission;
-                pendingInventorySubmission = null;
-                resetInventoryEntryForm();
-                closeModal('add-inventory-modal');
-                showToast(`${saved.styleCount} style${saved.styleCount === 1 ? '' : 's'} saved and verified in Google Sheets${saved.vendor ? ` for ${saved.vendor}` : ''}.`);
-            }).catch(error => {
-                console.error('Inventory entry sync error:', error);
-                if (!pendingInventorySubmission) return;
-                pendingInventorySubmission.state = 'failed';
-                setInventorySubmissionUi('failed');
-                showToast('Google Sheets sync is still pending. Retry Sheet Sync in this form; the entry will not be duplicated.', 'warning');
-            });
         }
 
         // --- RENDER TABLES & VIEWS ---
@@ -2760,11 +2794,7 @@
                 order.items = editedLines.map(item => `${item.name || 'Product'} (${item.size || item.selectedSize || 'Free Size'}) x ${Math.max(1, Number(item.quantity ?? item.qty) || 1)}`).join(', ');
             }
             saveState();
-            if (lineItemsChanged) {
-                filterInventory();
-                syncInventoryWithGoogleSheets(null, true);
-            }
-            pushOrderToGoogleSheet(order);
+            if (lineItemsChanged) filterInventory();
             openOrderDetails(orderId);
             showToast('Order details updated.');
         }
@@ -2838,7 +2868,6 @@
             if (!order || !['Confirmed', 'In Transit', 'Delivered'].includes(status)) return;
             order.status = status;
             saveState();
-            pushOrderToGoogleSheet(order);
             if (!fromList) openOrderDetails(orderId);
             showToast('Order status updated.');
         }
@@ -2858,7 +2887,6 @@
             }
 
             saveState();
-            pushOrderToGoogleSheet(order);
             openOrderDetails(orderId);
             showToast('Shipping details saved and status set to In Transit.');
         }
@@ -2903,10 +2931,6 @@
             orderEditDraft = null;
             saveState();
             filterInventory();
-            if (googleSheetEndpoint) {
-                syncInventoryWithGoogleSheets(null, true);
-                deleteOrderFromGoogleSheet(orderId);
-            }
             closeModal('order-detail-modal');
             showToast(`Order ${orderId} deleted and stock restored.`);
         }
@@ -3237,7 +3261,7 @@
 
         function openModal(id) {
             if (id === 'add-inventory-modal') {
-                setInventorySubmissionUi(pendingInventorySubmission?.state || 'idle');
+                setInventorySubmissionUi('idle');
             }
             document.getElementById(id).classList.remove('hidden');
         }
@@ -3291,7 +3315,7 @@
             button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Preparing Backup…';
             (async () => {
                 let source = { inventory, inventoryEntries, orders };
-                if (googleSheetEndpoint && !pendingInventorySubmission) {
+                if (googleSheetEndpoint && !backendSyncDirty) {
                     try {
                         source = await loadSharedData();
                     } catch (error) {
@@ -3433,6 +3457,7 @@
             cart = Array.isArray(records.cart) ? records.cart : [];
             normalizeLegacySizeLabels();
             persistLocalState();
+            refreshBackendSyncState();
             if (records.preorders === null || records.preorders === undefined) localStorage.removeItem('sundari_preorders');
             else localStorage.setItem('sundari_preorders', typeof records.preorders === 'string' ? records.preorders : JSON.stringify(records.preorders));
             Object.entries(records.additionalAppStorage || {}).forEach(([key, value]) => {
@@ -3467,6 +3492,8 @@
                 if (!sameIds(inventory, savedData.inventory) || !sameIds(inventoryEntries, savedData.inventoryEntries) || !sameIds(orders, savedData.orders)) {
                     throw new Error('The connected sheet did not confirm all restored records.');
                 }
+                backendSyncBaseFingerprint = getBackendSyncFingerprint(savedData);
+                refreshBackendSyncState();
                 showToast('Backup restored and verified in Google Sheets.');
             } catch (error) {
                 console.error('Google Sheets backup restore failed:', error);
@@ -3480,107 +3507,25 @@
                 showToast('Enter the Google Sheets Web App URL first.');
                 return;
             }
-            if (!window.confirm(`Save this Google Apps Script URL on this device and send the current inventory and purchase records to it?\n\n${url}`)) return;
+            if (!window.confirm(`Save this Google Apps Script URL on this device? Your local changes will sync when you tap the cloud icon in the header.\n\n${url}`)) return;
             googleSheetEndpoint = url;
             localStorage.setItem('sundari_sheet_url', url);
+            backendSyncBaseFingerprint = null;
+            setBackendSyncDirty(true);
             closeModal('settings-modal');
-            showToast('Sending current inventory to Google Sheets...');
-            syncInventoryWithGoogleSheets();
+            showToast('Sheet URL saved. Tap the cloud icon to update the backend.');
         }
 
-        function pushOrderToGoogleSheet(orderData) {
-            if (!googleSheetEndpoint) return;
-            fetch(googleSheetEndpoint, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'LOG_ORDER', data: orderData })
-            }).then(() => {
-                console.log('Order synced to Google Sheets.');
-            }).catch(err => console.error('Sheet Sync Error:', err));
-        }
-
-        function deleteOrderFromGoogleSheet(orderId) {
-            if (!googleSheetEndpoint) return;
-            fetch(googleSheetEndpoint, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'DELETE_ORDER', data: { id: orderId } })
-            }).then(() => {
-                console.log('Order deletion synced to Google Sheets.');
-            }).catch(err => console.error('Order deletion sync error:', err));
-        }
-
-        function buildGoogleSheetInventoryRows() {
-            return inventory.map(product => {
-                const sizeQuantities = product.sizeQuantities || {};
-                const sizesAvailable = (product.sizes || []).map(size => {
-                    const hasCount = Object.prototype.hasOwnProperty.call(sizeQuantities, size);
-                    return `${size}: ${hasCount ? Math.max(0, parseInt(sizeQuantities[size], 10) || 0) : `untracked (overall ${product.stock})`}`;
-                }).join(', ');
-                return { ...product, sizeQuantities, sizesAvailable };
-            });
-        }
-
-        function syncInventoryWithGoogleSheets(entry = null, quiet = false) {
-            if (!googleSheetEndpoint) {
-                if (!quiet) showToast('Add a Google Sheets Web App URL to enable inventory sync.');
-                return Promise.resolve(false);
-            }
-            const payload = {
-                action: 'SYNC_INVENTORY',
-                data: buildGoogleSheetInventoryRows(),
-                inventoryEntry: entry,
-                inventoryEntries
-            };
-            return fetch(googleSheetEndpoint, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            }).then(async () => {
-                const savedData = await loadSharedData();
-                const idsMatch = (expected, actual) => {
-                    const expectedIds = expected.map(record => String(record.id || '')).filter(Boolean).sort();
-                    const actualIds = actual.map(record => String(record.id || '')).filter(Boolean).sort();
-                    return expectedIds.length === actualIds.length && expectedIds.every((id, index) => id === actualIds[index]);
-                };
-                if (!idsMatch(inventory, savedData.inventory) || !idsMatch(inventoryEntries, savedData.inventoryEntries)) {
-                    throw new Error('Google Sheets did not save the current inventory and purchase entry list.');
-                }
-                const savedInventoryById = new Map(savedData.inventory.map(product => [String(product.id), product]));
-                const sizeCountsMatch = inventory.every(product => {
-                    const saved = savedInventoryById.get(String(product.id));
-                    if (!saved || Number(saved.stock) !== Number(product.stock)) return false;
-                    const normalizedCounts = counts => {
-                        const merged = Object.entries(counts || {}).reduce((result, [size, quantity]) => {
-                            const key = normalizeSizeKey(size);
-                            if (key) result[key] = (result[key] || 0) + Math.max(0, Number(quantity) || 0);
-                            return result;
-                        }, {});
-                        return Object.entries(merged).sort(([left], [right]) => left.localeCompare(right));
-                    };
-                    return JSON.stringify(normalizedCounts(saved.sizeQuantities)) === JSON.stringify(normalizedCounts(product.sizeQuantities));
-                });
-                if (!sizeCountsMatch) throw new Error('Google Sheets stock quantities did not match the app after sync.');
-                if (!quiet) showToast('Inventory and purchase entries verified in Google Sheets.');
-                return true;
-            }).catch(error => {
-                console.error('Inventory sync error:', error);
-                showToast('Inventory was saved locally, but Google Sheets sync failed.', 'warning');
-                return false;
-            });
-        }
-
-        function syncWithGoogleSheets() {
+        async function syncWithGoogleSheets() {
             if (!googleSheetEndpoint) {
                 alert("Please enter a valid Google Apps Script URL first.");
                 return;
             }
-            if (!window.confirm('Sync the current inventory and purchase order records to the connected Google Sheet now?')) return;
-            showToast("Sending inventory, including size quantities, to Google Sheets...");
-            syncInventoryWithGoogleSheets().then(() => closeModal('settings-modal'));
+            if (!window.confirm('Update the connected Google Sheet with the current inventory, purchase orders, and sales orders?')) return;
+            backendSyncBaseFingerprint = null;
+            setBackendSyncDirty(true);
+            await syncPendingDataToBackend();
+            if (!backendSyncDirty) closeModal('settings-modal');
         }
 
         function checkGoogleSheetsConnection() {
