@@ -285,7 +285,7 @@
                 </button>
 
                 <!-- Dropdown Menu -->
-                <div id="dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-sundari-gold/30 py-2 z-50 transform opacity-0 scale-95 transition-all duration-200">
+                <div id="dropdown-menu" class="hidden absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-5rem)] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-sundari-gold/30 py-2 z-50 transform opacity-0 scale-95 transition-all duration-200">
                     <a href="#" data-nav-view="inventory" onclick="switchView('inventory'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-sundari-purple hover:bg-sundari-gold/10 transition">
                         <i class="fa-solid fa-house w-6 text-sundari-gold"></i> Home
                     </a>
@@ -299,9 +299,28 @@
                         <i class="fa-solid fa-receipt w-6 text-sundari-gold"></i> Orders
                     </a>
                     <div class="border-t border-gray-100 my-1"></div>
-                    <a href="#" onclick="openModal('settings-modal'); toggleMenu(); return false;" class="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-sundari-gold/10 transition">
-                        <i class="fa-solid fa-gear w-6 text-sundari-gold"></i> Settings
-                    </a>
+                    <button id="mobile-settings-toggle" type="button" onclick="toggleMobileSettingsMenu()" aria-expanded="false" class="w-full flex items-center px-4 py-3 text-left text-sm font-medium text-gray-600 hover:bg-sundari-gold/10 transition">
+                        <i class="fa-solid fa-gear w-6 text-sundari-gold"></i> <span class="flex-1">Settings</span><i id="mobile-settings-chevron" class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+                    </button>
+                    <div id="mobile-settings-options" class="hidden mx-2 mb-2 rounded-xl bg-sundari-cream/60 p-2 space-y-1">
+                        <button type="button" onclick="openSettingsAction('refresh-images'); closeMobileSettingsForPopup()" class="w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-sundari-purple hover:bg-white"><i class="fa-solid fa-images mr-2 text-sundari-gold"></i>Refresh images</button>
+                        <section class="rounded-lg bg-white/70 overflow-hidden">
+                            <button type="button" onclick="toggleMobileSettingsSection('sync')" aria-expanded="false" class="w-full px-3 py-2.5 text-left text-xs font-semibold text-sundari-purple"><i class="fa-solid fa-rotate mr-2 text-sundari-gold"></i>Sync <i id="mobile-sync-chevron" class="fa-solid fa-chevron-down float-right mt-0.5 text-gray-400"></i></button>
+                            <div id="mobile-sync-options" class="hidden border-t border-sundari-gold/20 px-2 py-1 space-y-1">
+                                <button type="button" onclick="openSettingsAction('sync-get'); closeMobileSettingsForPopup()" class="w-full rounded-md px-2 py-2 text-left text-xs text-gray-700 hover:bg-sundari-cream">Get data from backend</button>
+                                <button type="button" onclick="openSettingsAction('sync-send'); closeMobileSettingsForPopup()" class="w-full rounded-md px-2 py-2 text-left text-xs text-gray-700 hover:bg-sundari-cream">Send data to backend</button>
+                            </div>
+                        </section>
+                        <section class="rounded-lg bg-white/70 overflow-hidden">
+                            <button type="button" onclick="toggleMobileSettingsSection('backup')" aria-expanded="false" class="w-full px-3 py-2.5 text-left text-xs font-semibold text-sundari-purple"><i class="fa-solid fa-box-archive mr-2 text-sundari-gold"></i>Backup <i id="mobile-backup-chevron" class="fa-solid fa-chevron-down float-right mt-0.5 text-gray-400"></i></button>
+                            <div id="mobile-backup-options" class="hidden border-t border-sundari-gold/20 px-2 py-1 space-y-1">
+                                <button type="button" onclick="openSettingsAction('backup-create'); closeMobileSettingsForPopup()" class="w-full rounded-md px-2 py-2 text-left text-xs text-gray-700 hover:bg-sundari-cream">Create backup</button>
+                                <button type="button" onclick="openSettingsAction('backup-restore'); closeMobileSettingsForPopup()" class="w-full rounded-md px-2 py-2 text-left text-xs text-gray-700 hover:bg-sundari-cream">Restore backup</button>
+                                <button type="button" onclick="openSettingsAction('reset-app'); closeMobileSettingsForPopup()" class="w-full rounded-md px-2 py-2 text-left text-xs text-red-700 hover:bg-red-50">Reset App data</button>
+                            </div>
+                        </section>
+                        <button type="button" onclick="openSettingsSetup(); closeMobileSettingsForPopup()" class="w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-sundari-purple hover:bg-white"><i class="fa-solid fa-screwdriver-wrench mr-2 text-sundari-gold"></i>Setup</button>
+                    </div>
                 </div>
             </div>
             </div>
@@ -772,58 +791,54 @@
     </div>
 
     <!-- SETTINGS MODAL -->
-    <div id="settings-modal" class="app-modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto flex items-center justify-center p-4">
-        <div class="app-modal-panel rounded-2xl max-w-lg w-full overflow-hidden border">
-            <div class="app-modal-header p-4 flex justify-between items-center">
+    <div id="settings-modal" class="app-modal-backdrop fixed inset-0 z-50 hidden overflow-y-auto flex items-center justify-center p-2 sm:p-4">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] border">
+            <div class="app-modal-header p-4 flex shrink-0 justify-between items-center">
                 <h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-gear mr-2"></i>Settings</h3>
                 <button onclick="closeModal('settings-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="p-5 space-y-4 text-xs text-gray-700">
-                <p>Connect this app to Google Sheets to save inventory, size quantities, vendor entries, and sales orders.</p>
-                
-                <div>
-                    <label class="block font-semibold text-sundari-purple mb-1">Google Apps Script Web App URL</label>
-                    <input type="url" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm">
-                </div>
-
-                <div class="rounded-xl border border-sundari-gold/30 bg-sundari-cream/70 p-3 space-y-2">
-                    <div><h4 class="font-bold text-sundari-purple">Full Backup</h4><p class="mt-1 text-[11px] text-gray-600">Create a restorable document containing purchase and sales reports, all records, and images. Keep the file somewhere safe.</p></div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button id="create-backup-button" type="button" onclick="createBackupDocument()" class="px-3 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl"><i class="fa-solid fa-download mr-1"></i>Create Backup Document</button>
-                        <input id="restore-backup-file" type="file" accept=".html,.json,text/html,application/json" class="min-w-0 flex-1 text-[10px]">
-                        <button type="button" onclick="restoreBackupDocument()" class="px-3 py-2 border border-sundari-gold/50 text-sundari-purple font-bold rounded-xl">Restore Backup</button>
+            <div class="app-modal-content-scroll p-4 sm:p-5 space-y-3 text-xs text-gray-700">
+                <p class="text-sm">Choose a settings area. Each action opens a short description and asks before proceeding.</p>
+                <button type="button" onclick="openSettingsAction('refresh-images')" class="w-full rounded-xl border border-sundari-gold/40 bg-white/60 px-4 py-3 text-left font-bold text-sundari-purple hover:bg-sundari-cream"><i class="fa-solid fa-images mr-2 text-sundari-gold"></i>Refresh images <i class="fa-solid fa-chevron-right float-right mt-0.5 text-gray-400"></i></button>
+                <section class="rounded-xl border border-sundari-gold/40 bg-white/45 overflow-hidden">
+                    <button type="button" onclick="toggleSettingsSection('sync')" aria-expanded="false" class="w-full px-4 py-3 text-left font-bold text-sundari-purple"><i class="fa-solid fa-rotate mr-2 text-sundari-gold"></i>Sync <i id="settings-sync-chevron" class="fa-solid fa-chevron-down float-right mt-0.5 text-gray-400"></i></button>
+                    <div id="settings-sync-options" class="hidden border-t border-sundari-gold/20 p-2 space-y-1">
+                        <button type="button" onclick="openSettingsAction('sync-get')" class="w-full rounded-lg px-3 py-2.5 text-left hover:bg-sundari-cream"><i class="fa-solid fa-cloud-arrow-down mr-2"></i>Get data from backend</button>
+                        <button type="button" onclick="openSettingsAction('sync-send')" class="w-full rounded-lg px-3 py-2.5 text-left hover:bg-sundari-cream"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Send data to backend</button>
                     </div>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sundari-gold/30 bg-sundari-cream/70 p-3">
-                    <div><h4 class="font-bold text-sundari-purple">Refresh inventory images</h4><p class="mt-1 text-[11px] text-gray-600">Clear cached images and reload current records from Google Sheets.</p></div>
-                    <button id="reset-image-cache-button" type="button" onclick="resetImageCacheAndReloadData()" class="px-3 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl"><i id="reset-image-cache-icon" class="fa-solid fa-images mr-1"></i><span id="reset-image-cache-label">Refresh Images</span></button>
-                </div>
-
-                <div class="bg-sundari-cream p-3 rounded-xl border border-sundari-gold/30 text-[11px] space-y-1">
-                    <span class="font-bold text-sundari-purple">One-time setup:</span>
-                    <ol class="list-decimal pl-4 space-y-1 text-gray-600">
-                        <li>Open Apps Script from the target Sheet and paste in the updated <code class="bg-white px-1 font-mono">Code.gs</code>.</li>
-                        <li>Select and run <code class="bg-white px-1 font-mono">setupSundariSheets</code> once; approve access to create the three tabs.</li>
-                        <li>Deploy or update the Web app to execute as you, with access set to <strong>Anyone</strong>. Copy its <code class="bg-white px-1 font-mono">/exec</code> URL.</li>
-                        <li>Paste the URL and choose <strong>Check Connection</strong>. If the status is ready, choose <strong>Save &amp; Sync</strong> to save the URL and send existing inventory.</li>
-                    </ol>
-                </div>
-
-                <div class="pt-2 flex flex-wrap justify-between items-center gap-2">
-                    <button type="button" onclick="checkGoogleSheetsConnection()" class="px-3 py-2 border border-sundari-gold/40 text-sundari-purple font-bold rounded-xl hover:bg-sundari-cream">Check Connection</button>
-                    <button type="button" onclick="syncWithGoogleSheets()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl shadow hover:bg-emerald-700">
-                        <i class="fa-solid fa-rotate mr-1"></i> Sync Now
-                    </button>
-                    <button type="button" onclick="saveSheetSettings()" class="px-5 py-2 bg-sundari-purple text-sundari-gold font-bold rounded-xl shadow">Save &amp; Sync</button>
-                </div>
-                <div class="border-t border-gray-100 pt-3 flex items-center justify-between gap-3">
-                    <span class="text-[11px] text-gray-500">Clear app and connected Sheet records.</span>
-                    <button type="button" onclick="resetApplication()" class="px-3 py-2 bg-red-50 text-red-700 border border-red-200 font-bold rounded-xl hover:bg-red-100">Reset App Data</button>
-                </div>
+                </section>
+                <section class="rounded-xl border border-sundari-gold/40 bg-white/45 overflow-hidden">
+                    <button type="button" onclick="toggleSettingsSection('backup')" aria-expanded="false" class="w-full px-4 py-3 text-left font-bold text-sundari-purple"><i class="fa-solid fa-box-archive mr-2 text-sundari-gold"></i>Backup <i id="settings-backup-chevron" class="fa-solid fa-chevron-down float-right mt-0.5 text-gray-400"></i></button>
+                    <div id="settings-backup-options" class="hidden border-t border-sundari-gold/20 p-2 space-y-1">
+                        <button type="button" onclick="openSettingsAction('backup-create')" class="w-full rounded-lg px-3 py-2.5 text-left hover:bg-sundari-cream"><i class="fa-solid fa-download mr-2"></i>Create backup</button>
+                        <button type="button" onclick="openSettingsAction('backup-restore')" class="w-full rounded-lg px-3 py-2.5 text-left hover:bg-sundari-cream"><i class="fa-solid fa-upload mr-2"></i>Restore backup</button>
+                        <button type="button" onclick="openSettingsAction('reset-app')" class="w-full rounded-lg px-3 py-2.5 text-left text-red-700 hover:bg-red-50"><i class="fa-solid fa-trash-can mr-2"></i>Reset App data</button>
+                    </div>
+                </section>
+                <button type="button" onclick="openSettingsSetup()" class="w-full rounded-xl border border-sundari-gold/40 bg-white/60 px-4 py-3 text-left font-bold text-sundari-purple hover:bg-sundari-cream"><i class="fa-solid fa-screwdriver-wrench mr-2 text-sundari-gold"></i>Setup <i class="fa-solid fa-chevron-right float-right mt-0.5 text-gray-400"></i></button>
             </div>
         </div>
     </div>
+
+    <div id="settings-setup-modal" class="app-modal-backdrop fixed inset-0 z-[80] hidden overflow-y-auto flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this)closeModal('settings-setup-modal')">
+        <div class="app-modal-panel app-modal-scroll-frame rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] border">
+            <div class="app-modal-header p-4 flex shrink-0 justify-between items-center"><h3 class="font-brand text-lg font-bold text-sundari-gold"><i class="fa-solid fa-screwdriver-wrench mr-2"></i>Setup</h3><button onclick="closeModal('settings-setup-modal')" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="app-modal-content-scroll p-4 sm:p-5 space-y-4 text-xs text-gray-700">
+                <div class="bg-sundari-cream p-3 rounded-xl border border-sundari-gold/30 text-[11px] space-y-1"><span class="font-bold text-sundari-purple">One-time setup steps</span><ol class="list-decimal pl-4 space-y-1 text-gray-600"><li>Open Apps Script from the target Sheet and paste in the updated <code class="bg-white px-1 font-mono">Code.gs</code>.</li><li>Run <code class="bg-white px-1 font-mono">setupSundariSheets</code> once and approve access to create the tabs.</li><li>Deploy or update the Web app to execute as you, with access set to <strong>Anyone</strong>. Copy its <code class="bg-white px-1 font-mono">/exec</code> URL.</li><li>Enter the URL, check the connection, then save it. Existing local records can then be sent to the backend from Sync.</li></ol></div>
+                <div><label class="block font-semibold text-sundari-purple mb-1">Google Apps Script Web App URL</label><input type="url" id="google-sheet-url" placeholder="https://script.google.com/macros/s/..." class="w-full p-2.5 border border-sundari-gold/40 rounded-xl text-sm"></div>
+                <div class="flex flex-col sm:flex-row gap-2"><button type="button" onclick="openSettingsAction('setup-check')" class="flex-1 px-3 py-2.5 border border-sundari-gold/40 text-sundari-purple font-bold rounded-xl hover:bg-sundari-cream">Check Connection</button><button type="button" onclick="openSettingsAction('setup-save')" class="flex-1 px-3 py-2.5 bg-sundari-purple text-sundari-gold font-bold rounded-xl">Save Web App URL</button></div>
+                <p class="text-[11px] text-gray-500">Refresh images clears cached photos and reloads current records. Sync controls downloading or sending app data. Backup can create or restore a full document; reset clears app and connected Sheet records.</p>
+            </div>
+        </div>
+    </div>
+    <div id="settings-action-modal" class="app-modal-backdrop fixed inset-0 z-[90] hidden overflow-y-auto flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this)closeSettingsAction()">
+        <div class="app-modal-panel rounded-2xl max-w-md w-full overflow-hidden border">
+            <div class="app-modal-header p-4 flex justify-between items-center"><h3 id="settings-action-title" class="font-bold text-sundari-gold">Confirm action</h3><button onclick="closeSettingsAction()" class="text-gray-300 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="p-4 sm:p-5"><p id="settings-action-description" class="text-sm leading-relaxed text-gray-700"></p><p id="settings-action-detail" class="mt-2 text-xs text-gray-500"></p></div>
+            <div class="border-t border-sundari-gold/20 p-3 flex justify-end gap-2"><button type="button" onclick="closeSettingsAction()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-semibold">Cancel</button><button id="settings-action-confirm" type="button" onclick="confirmSettingsAction()" class="px-4 py-2 rounded-xl bg-sundari-purple text-sundari-gold font-bold">Confirm</button></div>
+        </div>
+    </div>
+    <input id="restore-backup-file" type="file" accept=".html,.json,text/html,application/json" class="hidden" onchange="handleRestoreBackupFileSelected()">
 
     <!-- NOTIFICATION TOAST -->
     <div id="toast" class="fixed top-20 right-5 z-50 hidden bg-sundari-purple text-sundari-gold px-4 py-3 rounded-xl shadow-2xl border border-sundari-gold/40 flex items-center space-x-2 transition-transform transform translate-y-[-10px]">
@@ -1179,15 +1194,19 @@
             });
         }
 
-        async function refreshSharedDataFromBackend() {
+        async function refreshSharedDataFromBackend(fromSettings = false) {
             if (!googleSheetEndpoint) {
                 showToast('Connect Google Sheets in Settings to reload backend data.');
                 return;
             }
+            if (fromSettings && backendSyncDirty) {
+                showToast('Send pending local changes to the backend before getting backend data.', 'warning');
+                return;
+            }
             const button = document.getElementById('mobile-reload-data-btn');
             const icon = document.getElementById('mobile-reload-data-icon');
-            if (!button || button.disabled) return;
-            button.disabled = true;
+            if (button?.disabled) return;
+            if (button) button.disabled = true;
             icon?.classList.add('animate-spin');
             try {
                 const sharedData = await loadSharedData();
@@ -1211,9 +1230,9 @@
                 showToast('Data reloaded from backend.');
             } catch (error) {
                 console.error('Backend data reload error:', error);
-                showToast('Could not reload data from backend. Check your connection and try again.');
+                showToast('Could not reload data from backend. Check your connection and try again.', 'warning');
             } finally {
-                button.disabled = false;
+                if (button) button.disabled = false;
                 icon?.classList.remove('animate-spin');
             }
         }
@@ -1229,7 +1248,7 @@
             }));
         }
 
-        async function resetImageCacheAndReloadData() {
+        async function resetImageCacheAndReloadData(confirmed = false) {
             if (!googleSheetEndpoint) {
                 showToast('Connect Google Sheets in Settings before refreshing images.');
                 return;
@@ -1242,14 +1261,14 @@
                 showToast('Sync your pending local changes before reloading backend data.', 'warning');
                 return;
             }
-            if (!window.confirm('Clear cached images and reload inventory, purchase orders, and sales orders from Google Sheets? This does not change stored records.')) return;
+            if (!confirmed) return openSettingsAction('refresh-images');
 
             const button = document.getElementById('reset-image-cache-button');
             const icon = document.getElementById('reset-image-cache-icon');
             const label = document.getElementById('reset-image-cache-label');
-            if (!button || button.disabled) return;
+            if (button?.disabled) return;
             const localSnapshot = getBackendSyncFingerprint();
-            button.disabled = true;
+            if (button) button.disabled = true;
             icon?.classList.add('fa-spin');
             if (label) label.textContent = 'Refreshing…';
             try {
@@ -1282,7 +1301,7 @@
                 console.error('Image cache refresh failed:', error);
                 showToast('Could not reload fresh data. Check your connection and try again.', 'warning');
             } finally {
-                button.disabled = false;
+                if (button) button.disabled = false;
                 icon?.classList.remove('fa-spin');
                 if (label) label.textContent = 'Refresh Images';
             }
@@ -3280,6 +3299,48 @@
             setTimeout(() => menu.classList.remove('opacity-0', 'scale-95'), 10);
         }
 
+        function toggleMobileSettingsMenu() {
+            const options = document.getElementById('mobile-settings-options');
+            const button = document.getElementById('mobile-settings-toggle');
+            const open = options.classList.contains('hidden');
+            options.classList.toggle('hidden', !open);
+            button.setAttribute('aria-expanded', String(open));
+            document.getElementById('mobile-settings-chevron').className = `fa-solid ${open ? 'fa-chevron-up' : 'fa-chevron-down'} text-xs text-gray-400`;
+            if (!open) collapseMobileSettingsSections();
+        }
+
+        function toggleMobileSettingsSection(section) {
+            ['sync', 'backup'].forEach(name => {
+                const options = document.getElementById(`mobile-${name}-options`);
+                const button = options.previousElementSibling;
+                const open = name === section && options.classList.contains('hidden');
+                options.classList.toggle('hidden', !open);
+                button.setAttribute('aria-expanded', String(open));
+                document.getElementById(`mobile-${name}-chevron`).className = `fa-solid ${open ? 'fa-chevron-up' : 'fa-chevron-down'} float-right mt-0.5 text-gray-400`;
+            });
+        }
+
+        function collapseMobileSettingsSections() {
+            ['sync', 'backup'].forEach(name => {
+                document.getElementById(`mobile-${name}-options`)?.classList.add('hidden');
+                const button = document.getElementById(`mobile-${name}-options`)?.previousElementSibling;
+                button?.setAttribute('aria-expanded', 'false');
+                const chevron = document.getElementById(`mobile-${name}-chevron`);
+                if (chevron) chevron.className = 'fa-solid fa-chevron-down float-right mt-0.5 text-gray-400';
+            });
+        }
+
+        function closeMobileSettingsForPopup() {
+            const options = document.getElementById('mobile-settings-options');
+            options?.classList.add('hidden');
+            document.getElementById('mobile-settings-toggle')?.setAttribute('aria-expanded', 'false');
+            const settingsChevron = document.getElementById('mobile-settings-chevron');
+            if (settingsChevron) settingsChevron.className = 'fa-solid fa-chevron-down text-xs text-gray-400';
+            collapseMobileSettingsSections();
+            const menu = document.getElementById('dropdown-menu');
+            if (menu && !menu.classList.contains('hidden')) toggleMenu();
+        }
+
         const appHeader = document.getElementById('app-header');
         let headerSwipeStart = null;
         appHeader.addEventListener('touchstart', event => {
@@ -3324,14 +3385,13 @@
             openModal('instagram-qr-modal');
         }
 
-        function resetApplication() {
+        function resetApplication(confirmed = false) {
             if (!googleSheetEndpoint) {
                 showToast('Connect Google Sheets before resetting so the sheet data can be cleared too.');
                 openModal('settings-modal');
                 return;
             }
-            const confirmed = window.confirm('Clear all SUNDARI inventory, vendor entries, sales orders, and cart from this browser and the connected Google Sheet? Sheet tabs and headers will remain. This cannot be undone.');
-            if (!confirmed) return;
+            if (!confirmed) return openSettingsAction('reset-app');
             fetch(googleSheetEndpoint, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -3361,6 +3421,90 @@
 
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
+        }
+
+        let pendingSettingsAction = '';
+        let pendingBackupRestore = null;
+
+        function toggleSettingsSection(section) {
+            const sections = ['sync', 'backup'];
+            sections.forEach(name => {
+                const options = document.getElementById(`settings-${name}-options`);
+                const button = options?.previousElementSibling;
+                const open = name === section && options.classList.contains('hidden');
+                options?.classList.toggle('hidden', !open);
+                button?.setAttribute('aria-expanded', String(open));
+                const chevron = document.getElementById(`settings-${name}-chevron`);
+                if (chevron) chevron.className = `fa-solid ${open ? 'fa-chevron-up' : 'fa-chevron-down'} float-right mt-0.5 text-gray-400`;
+            });
+        }
+
+        function openSettingsSetup() {
+            const input = document.getElementById('google-sheet-url');
+            if (input && !input.value) input.value = googleSheetEndpoint || '';
+            openModal('settings-setup-modal');
+        }
+
+        function openSettingsAction(action) {
+            const copy = {
+                'refresh-images': ['Refresh inventory images', 'Clear cached inventory photos, then reload inventory, purchase orders, and sales orders from Google Sheets.', 'This does not change records. Pending local changes must be synced first.'],
+                'sync-get': ['Get data from backend', 'Reload inventory, purchase orders, and sales orders from the connected Google Sheet.', 'This replaces the currently loaded app data with the backend copy.'],
+                'sync-send': ['Send data to backend', 'Send the current inventory, purchase orders, and sales orders to the connected Google Sheet.', 'This updates the backend with the data currently loaded in this app.'],
+                'backup-create': ['Create backup', 'Create a downloadable backup document containing app records, purchase and sales details, and embedded images.', 'Keep the generated file somewhere safe so it can be used to restore app data.'],
+                'backup-restore': ['Choose backup file', 'Choose a SUNDARI backup document to restore. The app will validate it and show a second confirmation before replacing data.', ''],
+                'backup-restore-confirm': ['Restore backup', '', ''],
+                'reset-app': ['Reset App data', 'Clear all SUNDARI inventory, vendor entries, sales orders, and cart from this browser and the connected Google Sheet.', 'This cannot be undone. Sheet tabs and headers remain.'],
+                'setup-check': ['Check connection', 'Open a new browser tab to check the connection and setup status for the Apps Script URL entered in Setup.', ''],
+                'setup-save': ['Save Web App URL', 'Save the Apps Script Web App URL on this device. You can then send the currently loaded records to the backend from Sync.', '']
+            }[action];
+            if (!copy) return;
+            if (action === 'sync-get' && backendSyncDirty) {
+                showToast('Send pending local changes to the backend before getting backend data.', 'warning');
+                return;
+            }
+            pendingSettingsAction = action;
+            document.getElementById('settings-action-title').textContent = copy[0];
+            document.getElementById('settings-action-description').textContent = copy[1];
+            document.getElementById('settings-action-detail').textContent = copy[2];
+            const confirm = document.getElementById('settings-action-confirm');
+            confirm.textContent = action === 'backup-restore' ? 'Choose file' : action === 'backup-restore-confirm' ? 'Restore' : action === 'reset-app' ? 'Reset data' : 'Confirm';
+            confirm.className = `px-4 py-2 rounded-xl ${action === 'reset-app' ? 'bg-red-700 text-white' : 'bg-sundari-purple text-sundari-gold'} font-bold`;
+            if (action === 'backup-restore-confirm' && pendingBackupRestore) {
+                const records = pendingBackupRestore.records;
+                document.getElementById('settings-action-description').textContent = `Restore ${records.inventory.length} inventory styles, ${records.inventoryEntries.length} purchase orders, and ${records.orders.length} sale orders to ${googleSheetEndpoint ? 'the app and its connected Google Sheet' : 'this app on this device'}?`;
+                document.getElementById('settings-action-detail').textContent = 'This replaces the current records at the destination. Photos and the other app data in the backup will also be restored.';
+            }
+            openModal('settings-action-modal');
+        }
+
+        function closeSettingsAction() {
+            closeModal('settings-action-modal');
+            pendingSettingsAction = '';
+        }
+
+        function confirmSettingsAction() {
+            const action = pendingSettingsAction;
+            closeSettingsAction();
+            if (action === 'refresh-images') return resetImageCacheAndReloadData(true);
+            if (action === 'sync-get') return refreshSharedDataFromBackend(true);
+            if (action === 'sync-send') return syncWithGoogleSheets(true);
+            if (action === 'backup-create') return createBackupDocument();
+            if (action === 'backup-restore') return document.getElementById('restore-backup-file').click();
+            if (action === 'backup-restore-confirm') {
+                const backup = pendingBackupRestore;
+                pendingBackupRestore = null;
+                return restoreBackupDocument(backup, true);
+            }
+            if (action === 'reset-app') return resetApplication(true);
+            if (action === 'setup-check') return checkGoogleSheetsConnection(true);
+            if (action === 'setup-save') return saveSheetSettings(true);
+        }
+
+        function handleRestoreBackupFileSelected() {
+            pendingBackupRestore = null;
+            const file = document.getElementById('restore-backup-file').files?.[0];
+            if (!file) return;
+            restoreBackupDocument();
         }
 
         function showToast(msg, type = 'success') {
@@ -3402,17 +3546,18 @@
 
         function createBackupDocument() {
             const button = document.getElementById('create-backup-button');
-            if (button.disabled) return;
-            button.disabled = true;
-            const originalLabel = button.innerHTML;
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Preparing Backup…';
+            if (button?.disabled) return;
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Preparing Backup…';
+            }
             (async () => {
                 let source = { inventory, inventoryEntries, orders };
                 if (googleSheetEndpoint && !backendSyncDirty) {
                     try {
                         source = await loadSharedData();
                     } catch (error) {
-                        if (!window.confirm('Could not read the connected Google Sheet. Create the backup from the data currently loaded in this app instead?')) return;
+                        throw new Error('Could not read the connected Google Sheet. Check the connection and try again before creating a full backup.');
                     }
                 }
 
@@ -3509,39 +3654,47 @@
                 console.error('Backup creation failed:', error);
                 showToast('Could not create the backup document.', 'warning');
             }).finally(() => {
-                button.disabled = false;
-                button.innerHTML = originalLabel;
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fa-solid fa-download mr-1"></i>Create Backup Document';
+                }
             });
         }
 
-        async function restoreBackupDocument() {
+        async function restoreBackupDocument(backupOverride = null, confirmed = false) {
             const input = document.getElementById('restore-backup-file');
             const file = input.files?.[0];
-            if (!file) return showToast('Choose a SUNDARI backup document first.', 'warning');
-            let backup;
-            try {
-                const text = await file.text();
-                if (/\.json$/i.test(file.name)) {
-                    backup = JSON.parse(text);
-                } else {
-                    const documentFile = new DOMParser().parseFromString(text, 'text/html');
-                    const dataNode = documentFile.getElementById('sundari-backup-data');
-                    if (!dataNode) throw new Error('The document does not contain SUNDARI backup data.');
-                    backup = JSON.parse(dataNode.textContent);
+            if (!backupOverride && !file) return showToast('Choose a SUNDARI backup document first.', 'warning');
+            let backup = backupOverride;
+            if (!backup) {
+                try {
+                    const text = await file.text();
+                    if (/\.json$/i.test(file.name)) {
+                        backup = JSON.parse(text);
+                    } else {
+                        const documentFile = new DOMParser().parseFromString(text, 'text/html');
+                        const dataNode = documentFile.getElementById('sundari-backup-data');
+                        if (!dataNode) throw new Error('The document does not contain SUNDARI backup data.');
+                        backup = JSON.parse(dataNode.textContent);
+                    }
+                    const records = backup?.records;
+                    if (backup?.format !== 'SUNDARI_FULL_BACKUP' || !Array.isArray(records?.inventory) || !Array.isArray(records?.inventoryEntries) || !Array.isArray(records?.orders)) {
+                        throw new Error('The backup is missing required SUNDARI data.');
+                    }
+                } catch (error) {
+                    console.error('Backup file could not be read:', error);
+                    input.value = '';
+                    return showToast('This file is not a valid SUNDARI backup.', 'warning');
                 }
-                const records = backup?.records;
-                if (backup?.format !== 'SUNDARI_FULL_BACKUP' || !Array.isArray(records?.inventory) || !Array.isArray(records?.inventoryEntries) || !Array.isArray(records?.orders)) {
-                    throw new Error('The backup is missing required SUNDARI data.');
-                }
-            } catch (error) {
-                console.error('Backup file could not be read:', error);
-                return showToast('This file is not a valid SUNDARI backup.', 'warning');
             }
 
             const records = backup.records;
-            const destination = googleSheetEndpoint ? 'the app and its connected Google Sheet' : 'this app on this device';
-            const confirmed = window.confirm(`Restore ${records.inventory.length} inventory styles, ${records.inventoryEntries.length} purchase orders, and ${records.orders.length} sale orders to ${destination}?\n\nThis replaces the current records at the destination. Photos and the other app data in the backup will also be restored.`);
-            if (!confirmed) return;
+            if (!confirmed) {
+                pendingBackupRestore = backup;
+                openSettingsAction('backup-restore-confirm');
+                input.value = '';
+                return;
+            }
 
             inventory = records.inventory;
             inventoryEntries = records.inventoryEntries;
@@ -3594,40 +3747,41 @@
             }
         }
 
-        function saveSheetSettings() {
+        function saveSheetSettings(confirmed = false) {
             const url = document.getElementById('google-sheet-url').value.trim();
             if (!url) {
                 showToast('Enter the Google Sheets Web App URL first.');
                 return;
             }
-            if (!window.confirm(`Save this Google Apps Script URL on this device? Your local changes will sync when you tap the cloud icon in the header.\n\n${url}`)) return;
+            if (!confirmed) return openSettingsAction('setup-save');
             googleSheetEndpoint = url;
             localStorage.setItem('sundari_sheet_url', url);
             backendSyncBaseFingerprint = null;
             setBackendSyncDirty(true);
             closeModal('settings-modal');
+            closeModal('settings-setup-modal');
             showToast('Sheet URL saved. Tap the cloud icon to update the backend.');
         }
 
-        async function syncWithGoogleSheets() {
+        async function syncWithGoogleSheets(confirmed = false) {
             if (!googleSheetEndpoint) {
-                alert("Please enter a valid Google Apps Script URL first.");
+                showToast('Connect Google Sheets in Setup before sending data.', 'warning');
                 return;
             }
-            if (!window.confirm('Update the connected Google Sheet with the current inventory, purchase orders, and sales orders?')) return;
+            if (!confirmed) return openSettingsAction('sync-send');
             backendSyncBaseFingerprint = null;
             setBackendSyncDirty(true);
             await syncPendingDataToBackend();
             if (!backendSyncDirty) closeModal('settings-modal');
         }
 
-        function checkGoogleSheetsConnection() {
+        function checkGoogleSheetsConnection(confirmed = false) {
             const endpoint = document.getElementById('google-sheet-url').value.trim() || googleSheetEndpoint;
             if (!endpoint) {
                 showToast('Enter the Google Sheets Web App URL first.');
                 return;
             }
-            if (!window.confirm(`Open a new tab to check the connection and setup for this Apps Script URL?\n\n${endpoint}`)) return;
+            if (!confirmed) return openSettingsAction('setup-check');
             const statusUrl = new URL(endpoint);
             statusUrl.searchParams.set('check', '1');
             window.open(statusUrl.toString(), '_blank', 'noopener');
